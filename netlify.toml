@@ -1,0 +1,9 @@
+[[redirects]]
+  from = "/auth/callback"
+  to = "/.netlify/functions/auth"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
