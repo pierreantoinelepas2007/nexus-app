@@ -15,7 +15,7 @@ exports.handler = async function(event) {
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       const gmailData = await gmailRes.json();
-
+console.log('Gmail response:', JSON.stringify(gmailData).slice(0, 200));
       if (gmailData.messages?.length) {
         const emailDetails = await Promise.all(
           gmailData.messages.slice(0, 3).map(async (msg) => {
