@@ -167,7 +167,7 @@ async function callNexus(msg){
     });
     const d=await r.json();
     removeTyping();
-    const reply=d.content?.filter(b=>b.type==='text').map(b=>b.text).join('\n')||"Je n'ai pas pu traiter ta demande.";
+    const reply=d.content?.[0]?.text
     history.push({role:'assistant',content:reply});
     addMsg('nexus',reply);
     speak(reply);
