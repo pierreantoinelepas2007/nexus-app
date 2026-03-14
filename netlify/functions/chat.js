@@ -11,7 +11,7 @@ exports.handler = async function(event) {
     try {
       // Récupérer les emails récents
       const gmailRes = await fetch(
-        'https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=5&q=is:unread',
+        'https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=5',
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       const gmailData = await gmailRes.json();
