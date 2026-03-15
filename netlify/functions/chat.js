@@ -58,7 +58,9 @@ console.log('Gmail response:', JSON.stringify(gmailData).slice(0, 200));
         const events = allEvents.map(e => {
           const start = e.start?.dateTime || e.start?.date || '';
           const date = new Date(start).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
-          return `- ${e.summary || 'Sans titre'} | ${date}`;
+          const location = e.location || '';
+const desc = e.description ? e.description.slice(0, 100) : '';
+return `- ${e.summary || 'Sans titre'} | ${date}${location ? ' | Salle: ' + location : ''}${desc ? ' | ' + desc : ''}`;
         });
         googleContext += `\n\nAGENDA (7 prochains jours):\n${events.join('\n')}`;
       } else {
