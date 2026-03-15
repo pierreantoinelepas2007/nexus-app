@@ -199,4 +199,14 @@ app.get('*', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Nexus running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Nexus running on port ${PORT}`);
+  // Ping toutes les 14 minutes pour éviter la veille
+  setInterval(() => {
+    fetch(`https://nexus-app-yzok.onrender.com/ping`)
+      .then(() => console.log('Ping OK'))
+      .catch(() => console.log('Ping failed'));
+  }, 14 * 60 * 1000);
+});
+
+app.get('/ping', (req, res) => res.json({ status: 'alive' }));
