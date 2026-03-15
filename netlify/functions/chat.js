@@ -42,7 +42,7 @@ console.log('Gmail response:', JSON.stringify(gmailData).slice(0, 200));
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       const calData = await calRes.json();
-
+console.log('Calendar response:', JSON.stringify(calData).slice(0, 300));
       if (calData.items?.length) {
         const events = calData.items.map(e => {
           const start = e.start?.dateTime || e.start?.date || '';
