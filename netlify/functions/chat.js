@@ -34,17 +34,28 @@ console.log('Gmail response:', JSON.stringify(gmailData).slice(0, 200));
         googleContext += '\n\nEMAILS: Aucun email non lu.';
       }
 
-      // Récupérer les événements du calendrier
+    // Récupérer tous les agendas
       const now = new Date().toISOString();
       const weekLater = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-      const calRes = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${now}&timeMax=${weekLater}&maxResults=5&singleEvents=true&orderBy=startTime`,
+      const calListRes = await fetch(
+        'https://www.googleapis.com/calendar/v3/users/me/calendarList',
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
-      const calData = await calRes.json();
-console.log('Calendar response:', JSON.stringify(calData).slice(0, 300));
-      if (calData.items?.length) {
-        const events = calData.items.map(e => {
+      const calList = await calListRes.json();
+      const calIds = calList.items?.map(c => c.id) || ['primary'];
+
+      const allEvents = [];
+      for (const calId of calIds.slice(0, 5)) {
+        const calRes = await fetch(
+          `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events?timeMin=${now}&timeMax=${weekLater}&maxResults=5&singleEvents=true&orderBy=startTime`,
+          { headers: { Authorization: `Bearer ${accessToken}` } }
+        );
+        const calData = await calRes.json();
+        if (calData.items?.length) allEvents.push(...calData.items);
+      }
+
+      if (allEvents.length) {
+        const events = allEvents.map(e => {
           const start = e.start?.dateTime || e.start?.date || '';
           const date = new Date(start).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
           return `- ${e.summary || 'Sans titre'} | ${date}`;
