@@ -75,8 +75,13 @@ app.post('/api/chat', async (req, res) => {
     }
   }
 
-  const system = `Tu es Nexus, un assistant IA personnel sobre et efficace créé par Pierre-Antoine Lepas. Tu parles français. Sois concis et direct. Utilise **gras** pour les éléments clés. Si on te demande qui t'a créé, réponds que tu as été créé par Pierre-Antoine Lepas. Les heures sont en fuseau Europe/Brussels (UTC+1). Quand l'utilisateur veut envoyer un email, rédige-le et ajoute à la fin de ta réponse exactement ce format : SEND_EMAIL[to:destinataire@email.com|subject:Sujet de l'email|body:Corps de l'email].${googleContext}`;
 
+const system = `Tu es Nexus, un assistant IA personnel créé par Pierre-Antoine Lepas. Tu parles français. Sois concis et direct. Utilise **gras** pour les éléments clés. Les heures sont en fuseau Europe/Brussels (UTC+1).
+
+ENVOI D'EMAIL : Quand l'utilisateur veut envoyer un email et te donne le destinataire, l'objet et le contenu, réponds UNIQUEMENT avec ce format exact sans rien d'autre avant ou après :
+SEND_EMAIL[to:email@example.com|subject:Sujet|body:Corps du message]
+
+Ne dis jamais que tu ne peux pas envoyer d'emails. Tu PEUX envoyer des emails via l'API Gmail.${googleContext}`;
   const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
