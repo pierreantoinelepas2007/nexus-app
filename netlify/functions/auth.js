@@ -1,14 +1,14 @@
 exports.handler = async function(event) {
   const { code } = event.queryStringParameters || {};
-  
+
   if (!code) {
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
       `client_id=${process.env.GOOGLE_CLIENT_ID}&` +
-      `redirect_uri=${process.env.SITE_URL}/auth/callback&` +
+      `redirect_uri=${process.env.SITE_URL}/.netlify/functions/auth&` +
       `response_type=code&` +
       `scope=https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/calendar.readonly&` +
-      `access_type=offline`;
-    
+      `access_type=offline&prompt=consent`;
+
     return {
       statusCode: 302,
       headers: { Location: authUrl }
@@ -22,13 +22,13 @@ exports.handler = async function(event) {
       code,
       client_id: process.env.GOOGLE_CLIENT_ID,
       client_secret: process.env.GOOGLE_CLIENT_SECRET,
-      redirect_uri: `${process.env.SITE_URL}/auth/callback`,
+      redirect_uri: `${process.env.SITE_URL}/.netlify/functions/auth`,
       grant_type: 'authorization_code'
     })
   });
 
   const tokens = await tokenRes.json();
-  
+
   return {
     statusCode: 302,
     headers: {
