@@ -530,28 +530,72 @@
   let voiceEnabled = false;
   let hasGoogle = false;
 
-  // Check URL for tokens (after Google OAuth redirect)
-  function init() {
+function init() {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('access_token');
+    const refresh = params.get('refresh_token');
 
     if (token) {
       accessToken = token;
       hasGoogle = true;
-      // Clean URL
+      if (refresh) localStorage.setItem('nexus_refresh', refresh);
+      localStorage.setItem('nexus_token', token);
+      localStorage.setItem('nexus_token_time', Date.now().toString());
       window.history.replaceState({}, '', '/');
       showApp(true);
     } else {
-      // Check localStorage for existing session
       const saved = localStorage.getItem('nexus_token');
-      if (saved) {
+      const savedTime = localStorage.getItem('nexus_token_time');
+      const age = Date.now() - parseInt(savedTime || '0');
+      if (saved && age < 55 * 60 * 1000) {
         accessToken = saved;
         hasGoogle = true;
         showApp(true);
+      } else if (localStorage.getItem('nexus_refresh')) {
+        refreshAccessToken();
       } else {
         document.getElementById('login-screen').style.display = 'flex';
       }
     }
+  }
+
+  async function refreshAccessToken() {
+    const refreshToken = localStorage.getItem('nexus_refresh');
+    if (!refreshToken) {
+      document.getElementById('login-screen').style.display = 'flex';
+      return;
+    }
+    try {
+      const res = await fetch('/.netlify/functions/refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken })
+      });
+      const data = await res.json();
+      if (data.access_token) {
+        accessToken = data.access_token;
+        hasGoogle = true;
+        localStorage.setItem('nexus_token', accessToken);
+        localStorage.setItem('nexus_token_time', Date.now().toString());
+        showApp(true);
+      } else {
+        localStorage.clear();
+        document.getElementById('login-screen').style.display = 'flex';
+      }
+    } catch(e) {
+      document.getElementById('login-screen').style.display = 'flex';
+    }
+  }
+
+  setInterval(async () => {
+    const refreshToken = localStorage.getItem('nexus_refresh');
+    if (!refreshToken) return;
+    const savedTime = localStorage.getItem('nexus_token_time');
+    const age = Date.now() - parseInt(savedTime || '0');
+    if (age > 50 * 60 * 1000) {
+      await refreshAccessToken();
+    }
+  }, 60 * 1000);
   }
 
   function showApp(withGoogle) {
