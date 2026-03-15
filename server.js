@@ -93,7 +93,37 @@ app.post('/api/chat', async (req, res) => {
   const reply = data.choices?.[0]?.message?.content || "Je n'ai pas pu traiter ta demande.";
   res.json({ content: [{ type: 'text', text: reply }] });
 });
+// Envoyer un email
+app.post('/api/send-email', async (req, res) => {
+  const { accessToken, to, subject, body } = req.body;
 
+  const email = [
+    `To: ${to}`,
+    `Subject: ${subject}`,
+    `Content-Type: text/plain; charset=utf-8`,
+    ``,
+    body
+  ].join('\n');
+
+  const encoded = Buffer.from(email).toString('base64')
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+  const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ raw: encoded })
+  });
+
+  const data = await response.json();
+  if (data.id) {
+    res.json({ success: true, message: 'Email envoyé !' });
+  } else {
+    res.json({ success: false, error: data.error?.message || 'Erreur inconnue' });
+  }
+});
 // Auth Google
 app.get('/auth', (req, res) => {
   const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
