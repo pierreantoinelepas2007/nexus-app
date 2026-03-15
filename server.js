@@ -142,34 +142,54 @@ app.get('/auth', (req, res) => {
 
 app.get('/auth/callback', async (req, res) => {
   const { code } = req.query;
-  const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      code,
-      client_id: process.env.GOOGLE_CLIENT_ID,
-      client_secret: process.env.GOOGLE_CLIENT_SECRET,
-      redirect_uri: `https://nexus-app-yzok.onrender.com/auth/callback`,
-      grant_type: 'authorization_code'
-    })
-  });
-  const tokens = await tokenRes.json();
-  res.redirect(`/?access_token=${tokens.access_token}&refresh_token=${tokens.refresh_token}`);
+  try {
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        code,
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET,
+        redirect_uri: `https://nexus-app-yzok.onrender.com/auth/callback`,
+        grant_type: 'authorization_code'
+      })
+    });
+    const tokens = await tokenRes.json();
+    console.log('Tokens received:', Object.keys(tokens));
+    if (!tokens.access_token) {
+      return res.redirect('/?error=no_token');
+    }
+    const refreshParam = tokens.refresh_token ? `&refresh_token=${tokens.refresh_token}` : '';
+    res.redirect(`/?access_token=${tokens.access_token}${refreshParam}`);
+  } catch(e) {
+    console.log('Auth error:', e.message);
+    res.redirect('/?error=auth_failed');
+  }
 });
 
-// Refresh token
 app.post('/api/refresh', async (req, res) => {
   const { refresh_token } = req.body;
-  const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      client_id: process.env.GOOGLE_CLIENT_ID,
-      client_secret: process.env.GOOGLE_CLIENT_SECRET,
-      refresh_token,
-      grant_type: 'refresh_token'
-    })
-  });
+  if (!refresh_token) {
+    return res.status(400).json({ error: 'No refresh token' });
+  }
+  try {
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET,
+        refresh_token,
+        grant_type: 'refresh_token'
+      })
+    });
+    const data = await tokenRes.json();
+    console.log('Refresh result:', data.access_token ? 'success' : data.error);
+    res.json({ access_token: data.access_token, error: data.error });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
   const data = await tokenRes.json();
   res.json({ access_token: data.access_token });
 });
