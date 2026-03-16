@@ -710,8 +710,16 @@
       const reply = data.content?.[0]?.text || "Je n'ai pas pu traiter ta demande.";
       messages.push({ role: 'assistant', content: reply });
 
-      // Détecter si Nexus propose d'envoyer un email
-      const emailMatch = reply.match(/SEND_EMAIL\[to:(.*?)\|subject:(.*?)\|body:(.*?)\]/s);
+      // Détecter si Nexus propose de créer un événement
+      const eventMatch = reply.match(/CREATE_EVENT\[summary:(.*?)\|start:(.*?)\|end:(.*?)(?:\|location:(.*?))?(?:\|description:(.*?))?\]/s);
+      if (eventMatch && hasGoogle && accessToken) {
+        const [, summary, start, end, location, description] = eventMatch;
+        showEventConfirm(summary.trim(), start.trim(), end.trim(), location?.trim() || '', description?.trim() || '');
+        const cleanReply = reply.replace(/CREATE_EVENT\[.*?\]/s, '').trim();
+        addMessage('ai', cleanReply || `Je vais créer cet événement. Confirme ci-dessous.`);
+      } else {
+        // Détecter si Nexus propose d'envoyer un email
+        const emailMatch = reply.match(/SEND_EMAIL\[to:(.*?)\|subject:(.*?)\|body:(.*?)\]/s);
       if (emailMatch && hasGoogle && accessToken) {
         const [, to, subject, emailBody] = emailMatch;
         showEmailConfirm(to.trim(), subject.trim(), emailBody.trim());
@@ -719,6 +727,7 @@
         addMessage('ai', cleanReply || `Je vais envoyer cet email à **${to.trim()}**. Confirme ci-dessous.`);
       } else {
         addMessage('ai', reply);
+      }
       }
 
       if (voiceEnabled) speak(reply);
@@ -816,6 +825,84 @@
         addMessage('ai', `✅ **Email envoyé** avec succès à ${to} !`);
       } else {
         addMessage('ai', `❌ Erreur lors de l'envoi : ${data.error}`);
+      }
+    } catch(e) {
+      removeTyping();
+      addMessage('ai', '❌ Erreur de connexion.');
+    }
+  }
+
+  // Event confirm
+  function showEventConfirm(summary, start, end, location, description) {
+    const existing = document.getElementById('event-confirm');
+    if (existing) existing.remove();
+
+    const div = document.createElement('div');
+    div.id = 'event-confirm';
+    div.style.cssText = 'background:#18181b;border:1px solid #059669;border-radius:14px;padding:1rem;margin:0 1.25rem;';
+
+    const startDate = new Date(start).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Brussels' });
+    const endDate = new Date(end).toLocaleDateString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Brussels' });
+
+    const label = document.createElement('div');
+    label.style.cssText = 'font-size:0.8rem;color:#71717a;margin-bottom:0.5rem;font-family:DM Mono,monospace;';
+    label.textContent = 'ÉVÉNEMENT À CRÉER';
+
+    const summaryDiv = document.createElement('div');
+    summaryDiv.style.cssText = 'font-size:0.85rem;color:#e4e4e7;margin-bottom:0.25rem;';
+    summaryDiv.innerHTML = `<strong style="color:#6ee7b7">Titre :</strong> ${summary}`;
+
+    const dateDiv = document.createElement('div');
+    dateDiv.style.cssText = 'font-size:0.85rem;color:#e4e4e7;margin-bottom:0.25rem;';
+    dateDiv.innerHTML = `<strong style="color:#6ee7b7">Quand :</strong> ${startDate} → ${endDate}`;
+
+    const btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex;gap:0.5rem;margin-top:0.75rem;';
+
+    const btnCreate = document.createElement('button');
+    btnCreate.style.cssText = 'background:#059669;border:none;border-radius:8px;padding:0.5rem 1rem;color:#022c22;font-weight:500;cursor:pointer;font-size:0.85rem;';
+    btnCreate.textContent = '📅 Créer';
+    btnCreate.addEventListener('click', () => confirmCreateEvent(summary, start, end, location, description));
+
+    const btnCancel = document.createElement('button');
+    btnCancel.style.cssText = 'background:none;border:1px solid #2e2e34;border-radius:8px;padding:0.5rem 1rem;color:#71717a;cursor:pointer;font-size:0.85rem;';
+    btnCancel.textContent = 'Annuler';
+    btnCancel.addEventListener('click', () => div.remove());
+
+    btnRow.appendChild(btnCreate);
+    btnRow.appendChild(btnCancel);
+    div.appendChild(label);
+    div.appendChild(summaryDiv);
+    div.appendChild(dateDiv);
+    if (location) {
+      const locDiv = document.createElement('div');
+      locDiv.style.cssText = 'font-size:0.85rem;color:#e4e4e7;margin-bottom:0.25rem;';
+      locDiv.innerHTML = `<strong style="color:#6ee7b7">Lieu :</strong> ${location}`;
+      div.appendChild(locDiv);
+    }
+    div.appendChild(btnRow);
+
+    document.getElementById('messages').appendChild(div);
+    document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+  }
+
+  async function confirmCreateEvent(summary, start, end, location, description) {
+    const confirm = document.getElementById('event-confirm');
+    if (confirm) confirm.remove();
+    addMessage('user', `Créer l'événement : ${summary}`);
+    addTyping();
+    try {
+      const res = await fetch('/api/create-event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessToken, summary, start, end, location, description })
+      });
+      const data = await res.json();
+      removeTyping();
+      if (data.success) {
+        addMessage('ai', `✅ **Événement créé** : ${summary} !`);
+      } else {
+        addMessage('ai', `❌ Erreur : ${data.error}`);
       }
     } catch(e) {
       removeTyping();
