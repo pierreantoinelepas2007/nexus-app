@@ -234,7 +234,66 @@ app.post('/api/create-event', async (req, res) => {
     res.json({ success: false, error: data.error?.message || 'Erreur inconnue' });
   }
 });
+// Lire un email complet
+app.post('/api/get-email', async (req, res) => {
+  const { accessToken, messageId } = req.body;
 
+  const response = await fetch(
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}?format=full`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+
+  const data = await response.json();
+  
+  const subject = data.payload?.headers?.find(h => h.name === 'Subject')?.value || '';
+  const from = data.payload?.headers?.find(h => h.name === 'From')?.value || '';
+  const to = data.payload?.headers?.find(h => h.name === 'To')?.value || '';
+  const threadId = data.threadId || '';
+
+  // Extraire le corps du message
+  let body = '';
+  const parts = data.payload?.parts || [data.payload];
+  for (const part of parts) {
+    if (part?.mimeType === 'text/plain' && part?.body?.data) {
+      body = Buffer.from(part.body.data, 'base64').toString('utf-8');
+      break;
+    }
+  }
+
+  res.json({ subject, from, to, body, threadId, messageId: data.id });
+});
+
+// Répondre à un email
+app.post('/api/reply-email', async (req, res) => {
+  const { accessToken, to, subject, body, threadId } = req.body;
+
+  const email = [
+    `To: ${to}`,
+    `Subject: Re: ${subject}`,
+    `Content-Type: text/plain; charset=utf-8`,
+    ``,
+    body
+  ].join('\n');
+
+  const encoded = Buffer.from(email).toString('base64')
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+  const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ raw: encoded, threadId })
+  });
+
+  const data = await response.json();
+  if (data.id) {
+    res.json({ success: true });
+  } else {
+    res.json({ success: false, error: data.error?.message || 'Erreur inconnue' });
+  }
+});
 app.get('/ping', (req, res) => res.json({ status: 'alive' }));
 
 app.get('*', (req, res) => {
