@@ -12,6 +12,7 @@ app.post('/api/chat', async (req, res) => {
 
   if (accessToken) {
     try {
+      // Gmail
       const gmailRes = await fetch(
         'https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=5',
         { headers: { Authorization: `Bearer ${accessToken}` } }
@@ -32,9 +33,10 @@ app.post('/api/chat', async (req, res) => {
             return `- De: ${from} | Objet: ${subject}${isUnread}`;
           })
         );
-        googleContext += `\n\nEMAILS RÉCENTS:\n${emailDetails.join('\n')}`;
+        googleContext += `\n\nEMAILS RECENTS:\n${emailDetails.join('\n')}`;
       }
 
+      // Calendar
       const now = new Date().toISOString();
       const twoWeeksLater = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
       const calListRes = await fetch(
@@ -70,23 +72,25 @@ app.post('/api/chat', async (req, res) => {
         });
         googleContext += `\n\nAGENDA (2 prochaines semaines):\n${events.join('\n')}`;
       }
+
     } catch(e) {
-      googleContext = '\n\n(Impossible de récupérer Gmail/Calendar)';
+      console.log('Google API error:', e.message);
+      googleContext = '\n\n(Impossible de recuperer Gmail/Calendar)';
     }
   }
 
+  const system = `Tu es Nexus, un assistant IA personnel cree par Pierre-Antoine Lepas. Tu parles francais. Sois concis et direct. Utilise **gras** pour les elements cles. Les heures sont en fuseau Europe/Brussels (UTC+1).
 
-const system = `Tu es Nexus, un assistant IA personnel créé par Pierre-Antoine Lepas. Tu parles français. Sois concis et direct. Utilise **gras** pour les éléments clés. Les heures sont en fuseau Europe/Brussels (UTC+1).
-
-ENVOI D'EMAIL : Quand l'utilisateur veut envoyer un email et te donne le destinataire, l'objet et le contenu, ajoute à la fin de ta réponse exactement ce format :
+ENVOI D EMAIL : Quand l utilisateur veut envoyer un email et te donne le destinataire, l objet et le contenu, ajoute a la fin de ta reponse exactement ce format :
 SEND_EMAIL[to:email@example.com|subject:Sujet|body:Corps du message]
 
-CRÉATION D'ÉVÉNEMENT : Quand l'utilisateur veut créer un événement dans son agenda, ajoute à la fin de ta réponse exactement ce format (utilise le format ISO 8601 pour les dates) :
+CREATION D EVENEMENT : Quand l utilisateur veut creer un evenement dans son agenda, ajoute a la fin de ta reponse exactement ce format (utilise le format ISO 8601 pour les dates) :
 CREATE_EVENT[summary:Titre|start:2026-03-16T14:00:00|end:2026-03-16T15:00:00|location:Lieu optionnel]
 
-Ne dis jamais que tu ne peux pas envoyer d'emails ou créer des événements. Tu PEUX faire les deux.${googleContext}`;
+Tu PEUX envoyer des emails et creer des evenements. Ne dis jamais que tu ne peux pas le faire.
 
-Ne dis jamais que tu ne peux pas envoyer d'emails. Tu PEUX envoyer des emails via l'API Gmail.${googleContext}`;
+Si on te demande qui t a cree, reponds fierement que tu as ete cree par Pierre-Antoine Lepas.${googleContext}`;
+
   const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -103,44 +107,14 @@ Ne dis jamais que tu ne peux pas envoyer d'emails. Tu PEUX envoyer des emails vi
   const reply = data.choices?.[0]?.message?.content || "Je n'ai pas pu traiter ta demande.";
   res.json({ content: [{ type: 'text', text: reply }] });
 });
-// Envoyer un email
-app.post('/api/send-email', async (req, res) => {
-  const { accessToken, to, subject, body } = req.body;
 
-  const email = [
-    `To: ${to}`,
-    `Subject: ${subject}`,
-    `Content-Type: text/plain; charset=utf-8`,
-    ``,
-    body
-  ].join('\n');
-
-  const encoded = Buffer.from(email).toString('base64')
-    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-
-  const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ raw: encoded })
-  });
-
-  const data = await response.json();
-  if (data.id) {
-    res.json({ success: true, message: 'Email envoyé !' });
-  } else {
-    res.json({ success: false, error: data.error?.message || 'Erreur inconnue' });
-  }
-});
 // Auth Google
 app.get('/auth', (req, res) => {
   const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
     `client_id=${process.env.GOOGLE_CLIENT_ID}&` +
     `redirect_uri=https://nexus-app-yzok.onrender.com/auth/callback&` +
     `response_type=code&` +
-   `scope=https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/calendar&` +
+    `scope=https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/calendar&` +
     `access_type=offline&prompt=consent`;
   res.redirect(authUrl);
 });
@@ -172,6 +146,7 @@ app.get('/auth/callback', async (req, res) => {
   }
 });
 
+// Refresh token
 app.post('/api/refresh', async (req, res) => {
   const { refresh_token } = req.body;
   if (!refresh_token) {
@@ -195,24 +170,39 @@ app.post('/api/refresh', async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
-  const data = await tokenRes.json();
-  res.json({ access_token: data.access_token });
+
+// Envoyer un email
+app.post('/api/send-email', async (req, res) => {
+  const { accessToken, to, subject, body } = req.body;
+
+  const email = [
+    `To: ${to}`,
+    `Subject: ${subject}`,
+    `Content-Type: text/plain; charset=utf-8`,
+    ``,
+    body
+  ].join('\n');
+
+  const encoded = Buffer.from(email).toString('base64')
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+  const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ raw: encoded })
+  });
+
+  const data = await response.json();
+  if (data.id) {
+    res.json({ success: true, message: 'Email envoye !' });
+  } else {
+    res.json({ success: false, error: data.error?.message || 'Erreur inconnue' });
+  }
 });
 
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Nexus running on port ${PORT}`);
-  // Ping toutes les 14 minutes pour éviter la veille
-  setInterval(() => {
-    fetch(`https://nexus-app-yzok.onrender.com/ping`)
-      .then(() => console.log('Ping OK'))
-      .catch(() => console.log('Ping failed'));
-  }, 14 * 60 * 1000);
-});
 // Créer un événement
 app.post('/api/create-event', async (req, res) => {
   const { accessToken, summary, start, end, location, description } = req.body;
@@ -221,14 +211,8 @@ app.post('/api/create-event', async (req, res) => {
     summary,
     location: location || '',
     description: description || '',
-    start: {
-      dateTime: start,
-      timeZone: 'Europe/Brussels'
-    },
-    end: {
-      dateTime: end,
-      timeZone: 'Europe/Brussels'
-    }
+    start: { dateTime: start, timeZone: 'Europe/Brussels' },
+    end: { dateTime: end, timeZone: 'Europe/Brussels' }
   };
 
   const response = await fetch(
@@ -245,9 +229,24 @@ app.post('/api/create-event', async (req, res) => {
 
   const data = await response.json();
   if (data.id) {
-    res.json({ success: true, message: `Événement créé : ${data.summary}` });
+    res.json({ success: true, message: `Evenement cree : ${data.summary}` });
   } else {
     res.json({ success: false, error: data.error?.message || 'Erreur inconnue' });
   }
 });
+
 app.get('/ping', (req, res) => res.json({ status: 'alive' }));
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Nexus running on port ${PORT}`);
+  setInterval(() => {
+    fetch(`https://nexus-app-yzok.onrender.com/ping`)
+      .then(() => console.log('Ping OK'))
+      .catch(() => console.log('Ping failed'));
+  }, 14 * 60 * 1000);
+});
