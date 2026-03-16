@@ -733,9 +733,23 @@
         showReplyConfirm(to.trim(), subject.trim(), replyBody.trim(), threadId.trim());
         addMessage('ai', reply.replace(/REPLY_EMAIL\[.*?\]/s, '').trim() || `Je vais répondre à cet email. Confirme ci-dessous.`);
       } else {
-        addMessage('ai', reply);
+        // Détecter si Nexus veut sauvegarder en mémoire
+        const memoryMatch = reply.match(/SAVE_MEMORY\[(.*?)\]/s);
+        if (memoryMatch) {
+          const pairs = memoryMatch[1].split('|');
+          const memoryData = {};
+          pairs.forEach(pair => {
+            const [key, ...valueParts] = pair.split(':');
+            if (key && valueParts.length) memoryData[key.trim()] = valueParts.join(':').trim();
+          });
+          fetch('/api/memory', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(memoryData)
+          });
+        }
+        addMessage('ai', reply.replace(/SAVE_MEMORY\[.*?\]/s, '').trim());
       }
-
       if (voiceEnabled) speak(reply);
     } catch(e) {
       removeTyping();
