@@ -87,9 +87,12 @@ SEND_EMAIL[to:email@example.com|subject:Sujet|body:Corps du message]
 CREATION D EVENEMENT : Quand l utilisateur veut creer un evenement dans son agenda, ajoute a la fin de ta reponse exactement ce format (utilise le format ISO 8601 pour les dates) :
 CREATE_EVENT[summary:Titre|start:2026-03-16T14:00:00|end:2026-03-16T15:00:00|location:Lieu optionnel]
 
-Tu PEUX envoyer des emails et creer des evenements. Ne dis jamais que tu ne peux pas le faire.
+Tu PEUX envoyer des emails, creer des evenements et repondre aux emails. Ne dis jamais que tu ne peux pas le faire.
 
-Si on te demande qui t a cree, reponds fierement que tu as ete cree par Pierre-Antoine Lepas.${googleContext}`;
+REPONSE A UN EMAIL : Quand l utilisateur veut repondre a un email existant, ajoute a la fin de ta reponse exactement ce format :
+REPLY_EMAIL[to:email@example.com|subject:Sujet original|body:Corps de la reponse|threadId:id_du_thread]
+
+Si on te demande qui t a cree, reponds que tu as ete cree par Pierre-Antoine Lepas.${googleContext}`;
 
   const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
