@@ -589,7 +589,7 @@
     if (age > 50 * 60 * 1000) await refreshAccessToken();
   }, 60 * 1000);
 
-  function showApp(withGoogle) {
+ function showApp(withGoogle) {
     if (withGoogle && accessToken) {
       localStorage.setItem('nexus_token', accessToken);
       document.getElementById('user-badge').style.display = 'flex';
@@ -600,6 +600,7 @@
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').style.display = 'flex';
     document.getElementById('input').focus();
+    startChecks();
   }
 
   function startWithoutGoogle() {
@@ -1067,7 +1068,76 @@
       addMessage('ai', '❌ Erreur de connexion.');
     }
   }
+// Notifications push
+  async function requestNotificationPermission() {
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'default') {
+      await Notification.requestPermission();
+    }
+  }
 
+  function sendNotification(title, body, icon = '/favicon.ico') {
+    if (Notification.permission !== 'granted') return;
+    const notif = new Notification(title, {
+      body,
+      icon,
+      badge: '/favicon.ico'
+    });
+    notif.onclick = () => window.focus();
+  }
+
+  // Vérifier les emails non lus toutes les 5 minutes
+  let lastEmailCount = 0;
+  async function checkNewEmails() {
+    if (!hasGoogle || !accessToken) return;
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accessToken,
+          messages: [{ role: 'user', content: 'Combien ai-je d emails non lus ? Reponds uniquement avec un nombre.' }]
+        })
+      });
+      const data = await res.json();
+      const text = data.content?.[0]?.text || '0';
+      const count = parseInt(text.match(/\d+/)?.[0] || '0');
+      if (count > lastEmailCount && lastEmailCount !== 0) {
+        sendNotification('📧 Nouveau message', `Tu as ${count} emails non lus`, '');
+      }
+      lastEmailCount = count;
+    } catch(e) {}
+  }
+
+  // Résumé matinal
+  function checkMorningBriefing() {
+    const now = new Date();
+    const hours = now.getHours();
+    const lastBriefing = localStorage.getItem('nexus_last_briefing');
+    const today = now.toDateString();
+    
+    if (hours >= 7 && hours < 10 && lastBriefing !== today && hasGoogle) {
+      localStorage.setItem('nexus_last_briefing', today);
+      setTimeout(() => {
+        sendNotification(
+          '☀️ Bonjour Pierre-Antoine !',
+          'Ton briefing Nexus est prêt. Clique pour voir ton agenda du jour.',
+        );
+        // Envoyer le briefing dans le chat
+        setTimeout(() => {
+          quickAsk("Donne-moi mon briefing du matin : agenda du jour et emails importants");
+        }, 2000);
+      }, 3000);
+    }
+  }
+
+  // Démarrer les vérifications
+  function startChecks() {
+    requestNotificationPermission();
+    checkMorningBriefing();
+    setInterval(checkNewEmails, 5 * 60 * 1000);
+    setInterval(checkMorningBriefing, 60 * 1000);
+  }
   init();
 </script>
 </body>
