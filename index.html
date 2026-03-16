@@ -710,33 +710,30 @@
       const reply = data.content?.[0]?.text || "Je n'ai pas pu traiter ta demande.";
       messages.push({ role: 'assistant', content: reply });
 
-      // Détecter si Nexus propose de créer un événement
+      // Détecter les actions
+      const deleteMatch = reply.match(/DELETE_EVENT\[eventId:(.*?)\|summary:(.*?)\]/s);
       const eventMatch = reply.match(/CREATE_EVENT\[summary:(.*?)\|start:(.*?)\|end:(.*?)(?:\|location:(.*?))?(?:\|description:(.*?))?\]/s);
-      if (eventMatch && hasGoogle && accessToken) {
+      const emailMatch = reply.match(/SEND_EMAIL\[to:(.*?)\|subject:(.*?)\|body:(.*?)\]/s);
+      const replyMatch = reply.match(/REPLY_EMAIL\[to:(.*?)\|subject:(.*?)\|body:(.*?)\|threadId:(.*?)\]/s);
+
+      if (deleteMatch && hasGoogle && accessToken) {
+        const [, eventId, summary] = deleteMatch;
+        showDeleteConfirm(eventId.trim(), summary.trim());
+        addMessage('ai', reply.replace(/DELETE_EVENT\[.*?\]/s, '').trim() || `Je vais supprimer **${summary.trim()}**. Confirme ci-dessous.`);
+      } else if (eventMatch && hasGoogle && accessToken) {
         const [, summary, start, end, location, description] = eventMatch;
         showEventConfirm(summary.trim(), start.trim(), end.trim(), location?.trim() || '', description?.trim() || '');
-        const cleanReply = reply.replace(/CREATE_EVENT\[.*?\]/s, '').trim();
-        addMessage('ai', cleanReply || `Je vais créer cet événement. Confirme ci-dessous.`);
+        addMessage('ai', reply.replace(/CREATE_EVENT\[.*?\]/s, '').trim() || `Je vais créer cet événement. Confirme ci-dessous.`);
+      } else if (emailMatch && hasGoogle && accessToken) {
+        const [, to, subject, emailBody] = emailMatch;
+        showEmailConfirm(to.trim(), subject.trim(), emailBody.trim());
+        addMessage('ai', reply.replace(/SEND_EMAIL\[.*?\]/s, '').trim() || `Je vais envoyer cet email à **${to.trim()}**. Confirme ci-dessous.`);
+      } else if (replyMatch && hasGoogle && accessToken) {
+        const [, to, subject, replyBody, threadId] = replyMatch;
+        showReplyConfirm(to.trim(), subject.trim(), replyBody.trim(), threadId.trim());
+        addMessage('ai', reply.replace(/REPLY_EMAIL\[.*?\]/s, '').trim() || `Je vais répondre à cet email. Confirme ci-dessous.`);
       } else {
-        // Détecter si Nexus propose d'envoyer un email
-        const emailMatch = reply.match(/SEND_EMAIL\[to:(.*?)\|subject:(.*?)\|body:(.*?)\]/s);
-        if (emailMatch && hasGoogle && accessToken) {
-          const [, to, subject, emailBody] = emailMatch;
-          showEmailConfirm(to.trim(), subject.trim(), emailBody.trim());
-          const cleanReply = reply.replace(/SEND_EMAIL\[.*?\]/s, '').trim();
-          addMessage('ai', cleanReply || `Je vais envoyer cet email à **${to.trim()}**. Confirme ci-dessous.`);
-        } else {
-          // Détecter si Nexus propose de répondre à un email
-          const replyMatch = reply.match(/REPLY_EMAIL\[to:(.*?)\|subject:(.*?)\|body:(.*?)\|threadId:(.*?)\]/s);
-          if (replyMatch && hasGoogle && accessToken) {
-            const [, to, subject, replyBody, threadId] = replyMatch;
-            showReplyConfirm(to.trim(), subject.trim(), replyBody.trim(), threadId.trim());
-            const cleanReply = reply.replace(/REPLY_EMAIL\[.*?\]/s, '').trim();
-            addMessage('ai', cleanReply || `Je vais répondre à cet email. Confirme ci-dessous.`);
-          } else {
-            addMessage('ai', reply);
-          }
-        }
+        addMessage('ai', reply);
       }
 
       if (voiceEnabled) speak(reply);
@@ -834,6 +831,70 @@
         addMessage('ai', `✅ **Email envoyé** avec succès à ${to} !`);
       } else {
         addMessage('ai', `❌ Erreur lors de l'envoi : ${data.error}`);
+      }
+    } catch(e) {
+      removeTyping();
+      addMessage('ai', '❌ Erreur de connexion.');
+    }
+  }
+
+  // Delete event confirm
+  function showDeleteConfirm(eventId, summary) {
+    const existing = document.getElementById('delete-confirm');
+    if (existing) existing.remove();
+
+    const div = document.createElement('div');
+    div.id = 'delete-confirm';
+    div.style.cssText = 'background:#18181b;border:1px solid #f87171;border-radius:14px;padding:1rem;margin:0 1.25rem;';
+
+    const label = document.createElement('div');
+    label.style.cssText = 'font-size:0.8rem;color:#71717a;margin-bottom:0.5rem;font-family:DM Mono,monospace;';
+    label.textContent = 'ÉVÉNEMENT À SUPPRIMER';
+
+    const summaryDiv = document.createElement('div');
+    summaryDiv.style.cssText = 'font-size:0.85rem;color:#e4e4e7;margin-bottom:0.75rem;';
+    summaryDiv.innerHTML = `<strong style="color:#f87171">Titre :</strong> ${summary}`;
+
+    const btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex;gap:0.5rem;';
+
+    const btnDelete = document.createElement('button');
+    btnDelete.style.cssText = 'background:#f87171;border:none;border-radius:8px;padding:0.5rem 1rem;color:#fff;font-weight:500;cursor:pointer;font-size:0.85rem;';
+    btnDelete.textContent = '🗑️ Supprimer';
+    btnDelete.addEventListener('click', () => confirmDeleteEvent(eventId, summary));
+
+    const btnCancel = document.createElement('button');
+    btnCancel.style.cssText = 'background:none;border:1px solid #2e2e34;border-radius:8px;padding:0.5rem 1rem;color:#71717a;cursor:pointer;font-size:0.85rem;';
+    btnCancel.textContent = 'Annuler';
+    btnCancel.addEventListener('click', () => div.remove());
+
+    btnRow.appendChild(btnDelete);
+    btnRow.appendChild(btnCancel);
+    div.appendChild(label);
+    div.appendChild(summaryDiv);
+    div.appendChild(btnRow);
+
+    document.getElementById('messages').appendChild(div);
+    document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+  }
+
+  async function confirmDeleteEvent(eventId, summary) {
+    const confirm = document.getElementById('delete-confirm');
+    if (confirm) confirm.remove();
+    addMessage('user', `Supprimer : ${summary}`);
+    addTyping();
+    try {
+      const res = await fetch('/api/delete-event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessToken, eventId })
+      });
+      const data = await res.json();
+      removeTyping();
+      if (data.success) {
+        addMessage('ai', `✅ **Événement supprimé** : ${summary} !`);
+      } else {
+        addMessage('ai', `❌ Erreur : ${data.error}`);
       }
     } catch(e) {
       removeTyping();
