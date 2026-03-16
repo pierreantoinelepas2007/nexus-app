@@ -68,7 +68,7 @@ app.post('/api/chat', async (req, res) => {
             hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Brussels'
           });
           const location = e.location ? ` | Salle: ${e.location}` : '';
-          return `- ${e.summary || 'Sans titre'} | ${date}${location}`;
+          return `- ${e.summary || 'Sans titre'} | ${date}${location} | ID:${e.id}`;
         });
         googleContext += `\n\nAGENDA (2 prochaines semaines):\n${events.join('\n')}`;
       }
