@@ -308,7 +308,10 @@ document.addEventListener('paste', (e) => {
     if (item.type.startsWith('image/')) {
       const blob = item.getAsFile();
       const reader = new FileReader();
-      reader.onload = (ev) => setImage(ev.target.result);
+      reader.onload = (ev) => {
+        setImage(ev.target.result);
+        // Ne pas envoyer automatiquement — juste afficher la preview
+      };
       reader.readAsDataURL(blob);
       e.preventDefault();
       break;
