@@ -9,7 +9,16 @@ app.use(express.static('.'));
 app.post('/api/chat', async (req, res) => {
   const { messages, accessToken } = req.body;
   let googleContext = '';
-
+let memoryContext = '';
+try {
+  const fs = require('fs');
+  if (fs.existsSync('./memory.json')) {
+    const memory = JSON.parse(fs.readFileSync('./memory.json', 'utf-8'));
+    if (Object.keys(memory).length > 0) {
+      memoryContext = `\n\nMEMOIRE UTILISATEUR:\n${JSON.stringify(memory, null, 2)}`;
+    }
+  }
+} catch(e) {}
   if (accessToken) {
     try {
       // Gmail
@@ -95,7 +104,10 @@ SUPPRESSION D EVENEMENT : Quand l utilisateur veut supprimer un evenement, ajout
 DELETE_EVENT[eventId:id_de_levenement|summary:Nom de l evenement]
 
 RECHERCHE EMAIL : Quand l utilisateur cherche un email specifique, utilise les resultats de recherche deja fournis dans le contexte. Si tu ne trouves pas, dis-lui de preciser sa recherche.
-Si on te demande qui t a cree, reponds que tu as ete cree par Pierre-Antoine Lepas.${googleContext}`;
+Si on te demande qui t a cree, reponds fierement que tu as ete cree par Pierre-Antoine Lepas.
+
+MEMOIRE : Quand tu apprends quelque chose d important sur l utilisateur (nom, preferences, habitudes, informations personnelles), ajoute a la fin de ta reponse :
+SAVE_MEMORY[key:valeur|key2:valeur2]${googleContext}${memoryContext}`;
 
   const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
@@ -348,6 +360,35 @@ app.post('/api/delete-event', async (req, res) => {
   } else {
     const data = await response.json();
     res.json({ success: false, error: data.error?.message || 'Erreur inconnue' });
+  }
+});
+// Lire la mémoire
+app.get('/api/memory', (req, res) => {
+  try {
+    const fs = require('fs');
+    if (fs.existsSync('./memory.json')) {
+      const memory = JSON.parse(fs.readFileSync('./memory.json', 'utf-8'));
+      res.json({ memory });
+    } else {
+      res.json({ memory: {} });
+    }
+  } catch(e) {
+    res.json({ memory: {} });
+  }
+});
+
+// Sauvegarder la mémoire
+app.post('/api/memory', (req, res) => {
+  try {
+    const fs = require('fs');
+    const existing = fs.existsSync('./memory.json') 
+      ? JSON.parse(fs.readFileSync('./memory.json', 'utf-8')) 
+      : {};
+    const updated = { ...existing, ...req.body };
+    fs.writeFileSync('./memory.json', JSON.stringify(updated, null, 2));
+    res.json({ success: true });
+  } catch(e) {
+    res.json({ success: false, error: e.message });
   }
 });
 app.get('/ping', (req, res) => res.json({ status: 'alive' }));
