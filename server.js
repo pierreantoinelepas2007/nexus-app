@@ -208,5 +208,41 @@ app.listen(PORT, () => {
       .catch(() => console.log('Ping failed'));
   }, 14 * 60 * 1000);
 });
+// Créer un événement
+app.post('/api/create-event', async (req, res) => {
+  const { accessToken, summary, start, end, location, description } = req.body;
 
+  const event = {
+    summary,
+    location: location || '',
+    description: description || '',
+    start: {
+      dateTime: start,
+      timeZone: 'Europe/Brussels'
+    },
+    end: {
+      dateTime: end,
+      timeZone: 'Europe/Brussels'
+    }
+  };
+
+  const response = await fetch(
+    'https://www.googleapis.com/calendar/v3/calendars/primary/events',
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(event)
+    }
+  );
+
+  const data = await response.json();
+  if (data.id) {
+    res.json({ success: true, message: `Événement créé : ${data.summary}` });
+  } else {
+    res.json({ success: false, error: data.error?.message || 'Erreur inconnue' });
+  }
+});
 app.get('/ping', (req, res) => res.json({ status: 'alive' }));
