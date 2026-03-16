@@ -91,7 +91,10 @@ Tu PEUX envoyer des emails, creer des evenements et repondre aux emails. Ne dis 
 
 REPONSE A UN EMAIL : Quand l utilisateur veut repondre a un email existant, ajoute a la fin de ta reponse exactement ce format :
 REPLY_EMAIL[to:email@example.com|subject:Sujet original|body:Corps de la reponse|threadId:id_du_thread]
+SUPPRESSION D EVENEMENT : Quand l utilisateur veut supprimer un evenement, ajoute a la fin :
+DELETE_EVENT[eventId:id_de_levenement|summary:Nom de l evenement]
 
+RECHERCHE EMAIL : Quand l utilisateur cherche un email specifique, utilise les resultats de recherche deja fournis dans le contexte. Si tu ne trouves pas, dis-lui de preciser sa recherche.
 Si on te demande qui t a cree, reponds que tu as ete cree par Pierre-Antoine Lepas.${googleContext}`;
 
   const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -294,6 +297,56 @@ app.post('/api/reply-email', async (req, res) => {
   if (data.id) {
     res.json({ success: true });
   } else {
+    res.json({ success: false, error: data.error?.message || 'Erreur inconnue' });
+  }
+});
+// Rechercher des emails
+app.post('/api/search-emails', async (req, res) => {
+  const { accessToken, query } = req.body;
+
+  const response = await fetch(
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=5&q=${encodeURIComponent(query)}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  const data = await response.json();
+
+  if (!data.messages?.length) {
+    return res.json({ emails: [] });
+  }
+
+  const emails = await Promise.all(
+    data.messages.slice(0, 5).map(async (msg) => {
+      const detail = await fetch(
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=Date`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      const d = await detail.json();
+      const subject = d.payload?.headers?.find(h => h.name === 'Subject')?.value || 'Sans objet';
+      const from = d.payload?.headers?.find(h => h.name === 'From')?.value || 'Inconnu';
+      const isUnread = d.labelIds?.includes('UNREAD') ? ' [NON LU]' : '';
+      return `- De: ${from} | Objet: ${subject}${isUnread} | ID: ${msg.id}`;
+    })
+  );
+
+  res.json({ emails });
+});
+
+// Supprimer un événement
+app.post('/api/delete-event', async (req, res) => {
+  const { accessToken, eventId } = req.body;
+
+  const response = await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`,
+    {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${accessToken}` }
+    }
+  );
+
+  if (response.status === 204) {
+    res.json({ success: true });
+  } else {
+    const data = await response.json();
     res.json({ success: false, error: data.error?.message || 'Erreur inconnue' });
   }
 });
