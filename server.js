@@ -121,7 +121,7 @@ SAVE_MEMORY[key:valeur|key2:valeur2]${googleContext}${memoryContext}`;
     })
   });
 
-  cconst data = await response.json();
+  const data = await response.json();
 console.log('Groq response:', JSON.stringify(data).slice(0, 200));
 const reply = data.choices?.[0]?.message?.content || "Je n'ai pas pu traiter ta demande.";
   res.json({ content: [{ type: 'text', text: reply }] });
