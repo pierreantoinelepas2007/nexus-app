@@ -18,7 +18,7 @@ try {
       memoryContext = `\n\nMEMOIRE UTILISATEUR:\n${JSON.stringify(memory, null, 2)}`;
     }
   }
-} catch(e) body
+} catch(e) { return str; }
   if (accessToken) {
     try {
       // Gmail
