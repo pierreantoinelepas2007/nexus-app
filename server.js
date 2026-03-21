@@ -1,10 +1,24 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const { MongoClient } = require('mongodb');
 const app = express();
 
 app.use(express.json({limit: '10mb'}));
 app.use(express.static('.'));
+
+// MongoDB connection
+let db;
+async function connectDB() {
+  try {
+    const client = new MongoClient(process.env.MONGODB_URI);
+    await client.connect();
+    db = client.db('nexus');
+    console.log('MongoDB connected');
+  } catch(e) {
+    console.log('MongoDB error:', e.message);
+  }
+}
 
 function decodeHeader(str) {
   if (!str) return '';
@@ -21,19 +35,50 @@ function decodeHeader(str) {
   });
 }
 
+async function getUserMemory(userId) {
+  if (!db) return {};
+  try {
+    const user = await db.collection('users').findOne({ userId });
+    return (user && user.memory) || {};
+  } catch(e) {
+    return {};
+  }
+}
+
+async function saveUserMemory(userId, data) {
+  if (!db) return;
+  try {
+    await db.collection('users').updateOne(
+      { userId },
+      { $set: { memory: data, updatedAt: new Date() } },
+      { upsert: true }
+    );
+  } catch(e) {
+    console.log('Memory save error:', e.message);
+  }
+}
+
 app.post('/api/chat', async (req, res) => {
-  const { messages, accessToken } = req.body;
+  const { messages, accessToken, userId } = req.body;
   let googleContext = '';
   let memoryContext = '';
 
-  try {
-    if (fs.existsSync('./memory.json')) {
-      const memory = JSON.parse(fs.readFileSync('./memory.json', 'utf-8'));
-      if (Object.keys(memory).length > 0) {
-        memoryContext = '\n\nMEMOIRE UTILISATEUR:\n' + JSON.stringify(memory, null, 2);
-      }
+  // Get user memory from MongoDB or fallback to file
+  if (userId && db) {
+    const memory = await getUserMemory(userId);
+    if (Object.keys(memory).length > 0) {
+      memoryContext = '\n\nMEMOIRE UTILISATEUR:\n' + JSON.stringify(memory, null, 2);
     }
-  } catch(e) {}
+  } else {
+    try {
+      if (fs.existsSync('./memory.json')) {
+        const memory = JSON.parse(fs.readFileSync('./memory.json', 'utf-8'));
+        if (Object.keys(memory).length > 0) {
+          memoryContext = '\n\nMEMOIRE UTILISATEUR:\n' + JSON.stringify(memory, null, 2);
+        }
+      }
+    } catch(e) {}
+  }
 
   if (accessToken) {
     try {
@@ -51,8 +96,10 @@ app.post('/api/chat', async (req, res) => {
               { headers: { Authorization: 'Bearer ' + accessToken } }
             );
             const d = await detail.json();
-            const subject = decodeHeader(d.payload && d.payload.headers && d.payload.headers.find(h => h.name === 'Subject') && d.payload.headers.find(h => h.name === 'Subject').value) || 'Sans objet';
-            const from = decodeHeader(d.payload && d.payload.headers && d.payload.headers.find(h => h.name === 'From') && d.payload.headers.find(h => h.name === 'From').value) || 'Inconnu';
+            const subjectHeader = d.payload && d.payload.headers && d.payload.headers.find(h => h.name === 'Subject');
+            const fromHeader = d.payload && d.payload.headers && d.payload.headers.find(h => h.name === 'From');
+            const subject = decodeHeader((subjectHeader && subjectHeader.value) || '') || 'Sans objet';
+            const from = decodeHeader((fromHeader && fromHeader.value) || '') || 'Inconnu';
             const isUnread = d.labelIds && d.labelIds.includes('UNREAD') ? ' [NON LU]' : '';
             return '- De: ' + from + ' | Objet: ' + subject + isUnread;
           })
@@ -81,7 +128,11 @@ app.post('/api/chat', async (req, res) => {
         } catch(e) {}
       }
 
-      allEvents.sort((a, b) => new Date(a.start && (a.start.dateTime || a.start.date)) - new Date(b.start && (b.start.dateTime || b.start.date)));
+      allEvents.sort((a, b) => {
+        const dateA = new Date((a.start && (a.start.dateTime || a.start.date)) || 0);
+        const dateB = new Date((b.start && (b.start.dateTime || b.start.date)) || 0);
+        return dateA - dateB;
+      });
 
       if (allEvents.length) {
         const events = allEvents.slice(0, 30).map(e => {
@@ -105,6 +156,23 @@ app.post('/api/chat', async (req, res) => {
   const system = 'Tu es Nexus, un assistant IA personnel cree par Pierre-Antoine Lepas. Tu parles francais. Sois concis et direct. Utilise **gras** pour les elements cles. Les heures sont en fuseau Europe/Brussels (UTC+1).\n\nENVOI D EMAIL : Quand l utilisateur veut envoyer un email, ajoute a la fin :\nSEND_EMAIL[to:email@example.com|subject:Sujet|body:Corps]\n\nCREATION D EVENEMENT : Quand l utilisateur veut creer un evenement, ajoute a la fin :\nCREATE_EVENT[summary:Titre|start:2026-03-21T14:00:00|end:2026-03-21T15:00:00|location:Lieu]\n\nREPONSE EMAIL : Quand l utilisateur veut repondre a un email, ajoute a la fin :\nREPLY_EMAIL[to:email@example.com|subject:Sujet|body:Corps|threadId:id]\n\nSUPPRESSION EVENEMENT : Quand l utilisateur veut supprimer un evenement, ajoute a la fin :\nDELETE_EVENT[eventId:id|summary:Nom]\n\nMEMOIRE : Quand tu apprends quelque chose important sur l utilisateur, ajoute a la fin :\nSAVE_MEMORY[key:valeur|key2:valeur2]\n\nSi on te demande qui t a cree, reponds que tu as ete cree par Pierre-Antoine Lepas.' + googleContext + memoryContext;
 
   try {
+    const claudeMessages = messages.map(m => {
+      if (Array.isArray(m.content)) {
+        return {
+          role: m.role,
+          content: m.content.map(c => {
+            if (c.type === 'image_url') {
+              const base64 = c.image_url.url.split(',')[1];
+              const mediaType = c.image_url.url.split(';')[0].split(':')[1];
+              return { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } };
+            }
+            return c;
+          })
+        };
+      }
+      return m;
+    });
+
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -116,28 +184,29 @@ app.post('/api/chat', async (req, res) => {
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 1024,
         system: system,
-        messages: messages.map(m => {
-  if (Array.isArray(m.content)) {
-    return {
-      role: m.role,
-      content: m.content.map(c => {
-        if (c.type === 'image_url') {
-          const base64 = c.image_url.url.split(',')[1];
-          const mediaType = c.image_url.url.split(';')[0].split(':')[1];
-          return { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } };
-        }
-        return c;
-      })
-    };
-  }
-  return m;
-})
+        messages: claudeMessages
       })
     });
 
     const data = await response.json();
     console.log('Claude response:', JSON.stringify(data).slice(0, 200));
     const reply = (data.content && data.content[0] && data.content[0].text) || "Je n'ai pas pu traiter ta demande.";
+
+    // Save memory if needed
+    const memoryMatch = reply.match(/SAVE_MEMORY\[(.*?)\]/s);
+    if (memoryMatch && userId) {
+      const pairs = memoryMatch[1].split('|');
+      const newMemory = {};
+      pairs.forEach(p => {
+        const idx = p.indexOf(':');
+        if (idx > -1) {
+          newMemory[p.slice(0, idx).trim()] = p.slice(idx + 1).trim();
+        }
+      });
+      const existing = await getUserMemory(userId);
+      await saveUserMemory(userId, Object.assign({}, existing, newMemory));
+    }
+
     res.json({ content: [{ type: 'text', text: reply }] });
   } catch(e) {
     console.log('Claude error:', e.message);
@@ -150,7 +219,7 @@ app.get('/auth', (req, res) => {
     'client_id=' + process.env.GOOGLE_CLIENT_ID +
     '&redirect_uri=https://nexus-app-yzok.onrender.com/auth/callback' +
     '&response_type=code' +
-    '&scope=https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/calendar' +
+    '&scope=https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/userinfo.email' +
     '&access_type=offline&prompt=consent';
   res.redirect(authUrl);
 });
@@ -170,10 +239,26 @@ app.get('/auth/callback', async (req, res) => {
       })
     });
     const tokens = await tokenRes.json();
-    console.log('Tokens received:', Object.keys(tokens));
     if (!tokens.access_token) return res.redirect('/?error=no_token');
+
+    // Get user email to use as userId
+    const userRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { Authorization: 'Bearer ' + tokens.access_token }
+    });
+    const userInfo = await userRes.json();
+    const userId = userInfo.email || 'anonymous';
+
+    // Save tokens in MongoDB
+    if (db) {
+      await db.collection('users').updateOne(
+        { userId },
+        { $set: { userId, accessToken: tokens.access_token, refreshToken: tokens.refresh_token, updatedAt: new Date() } },
+        { upsert: true }
+      );
+    }
+
     const refreshParam = tokens.refresh_token ? '&refresh_token=' + tokens.refresh_token : '';
-    res.redirect('/?access_token=' + tokens.access_token + refreshParam);
+    res.redirect('/?access_token=' + tokens.access_token + refreshParam + '&user_id=' + encodeURIComponent(userId));
   } catch(e) {
     console.log('Auth error:', e.message);
     res.redirect('/?error=auth_failed');
@@ -204,10 +289,7 @@ app.post('/api/refresh', async (req, res) => {
 
 app.post('/api/send-email', async (req, res) => {
   const accessToken = req.body.accessToken;
-  const to = req.body.to;
-  const subject = req.body.subject;
-  const body = req.body.body;
-  const email = 'To: ' + to + '\nSubject: ' + subject + '\nContent-Type: text/plain; charset=utf-8\n\n' + body;
+  const email = 'To: ' + req.body.to + '\nSubject: ' + req.body.subject + '\nContent-Type: text/plain; charset=utf-8\n\n' + req.body.body;
   const encoded = Buffer.from(email).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
     method: 'POST',
@@ -215,25 +297,17 @@ app.post('/api/send-email', async (req, res) => {
     body: JSON.stringify({ raw: encoded })
   });
   const data = await response.json();
-  if (data.id) {
-    res.json({ success: true });
-  } else {
-    res.json({ success: false, error: (data.error && data.error.message) || 'Erreur inconnue' });
-  }
+  res.json({ success: !!data.id, error: (!data.id && data.error && data.error.message) || null });
 });
 
 app.post('/api/reply-email', async (req, res) => {
   const accessToken = req.body.accessToken;
-  const to = req.body.to;
-  const subject = req.body.subject;
-  const body = req.body.body;
-  const threadId = req.body.threadId;
-  const email = 'To: ' + to + '\nSubject: Re: ' + subject + '\nContent-Type: text/plain; charset=utf-8\n\n' + body;
+  const email = 'To: ' + req.body.to + '\nSubject: Re: ' + req.body.subject + '\nContent-Type: text/plain; charset=utf-8\n\n' + req.body.body;
   const encoded = Buffer.from(email).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
     method: 'POST',
     headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ raw: encoded, threadId: threadId })
+    body: JSON.stringify({ raw: encoded, threadId: req.body.threadId })
   });
   const data = await response.json();
   res.json({ success: !!data.id, error: (!data.id && data.error && data.error.message) || null });
@@ -258,11 +332,9 @@ app.post('/api/create-event', async (req, res) => {
 });
 
 app.post('/api/delete-event', async (req, res) => {
-  const accessToken = req.body.accessToken;
-  const eventId = req.body.eventId;
-  const response = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/' + eventId, {
+  const response = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/' + req.body.eventId, {
     method: 'DELETE',
-    headers: { Authorization: 'Bearer ' + accessToken }
+    headers: { Authorization: 'Bearer ' + req.body.accessToken }
   });
   if (response.status === 204) {
     res.json({ success: true });
@@ -274,8 +346,7 @@ app.post('/api/delete-event', async (req, res) => {
 
 app.post('/api/search-emails', async (req, res) => {
   const accessToken = req.body.accessToken;
-  const query = req.body.query;
-  const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=5&q=' + encodeURIComponent(query), {
+  const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=5&q=' + encodeURIComponent(req.body.query), {
     headers: { Authorization: 'Bearer ' + accessToken }
   });
   const data = await response.json();
@@ -285,35 +356,50 @@ app.post('/api/search-emails', async (req, res) => {
       headers: { Authorization: 'Bearer ' + accessToken }
     });
     const d = await detail.json();
-    const subject = decodeHeader((d.payload && d.payload.headers && d.payload.headers.find(h => h.name === 'Subject') && d.payload.headers.find(h => h.name === 'Subject').value) || '') || 'Sans objet';
-    const from = decodeHeader((d.payload && d.payload.headers && d.payload.headers.find(h => h.name === 'From') && d.payload.headers.find(h => h.name === 'From').value) || '') || 'Inconnu';
+    const subjectHeader = d.payload && d.payload.headers && d.payload.headers.find(h => h.name === 'Subject');
+    const fromHeader = d.payload && d.payload.headers && d.payload.headers.find(h => h.name === 'From');
+    const subject = decodeHeader((subjectHeader && subjectHeader.value) || '') || 'Sans objet';
+    const from = decodeHeader((fromHeader && fromHeader.value) || '') || 'Inconnu';
     const isUnread = d.labelIds && d.labelIds.includes('UNREAD') ? ' [NON LU]' : '';
     return '- De: ' + from + ' | Objet: ' + subject + isUnread + ' | ID: ' + msg.id;
   }));
   res.json({ emails });
 });
 
-app.get('/api/memory', (req, res) => {
-  try {
-    if (fs.existsSync('./memory.json')) {
-      const memory = JSON.parse(fs.readFileSync('./memory.json', 'utf-8'));
-      res.json({ memory });
-    } else {
+app.get('/api/memory', async (req, res) => {
+  const userId = req.query.userId;
+  if (userId && db) {
+    const memory = await getUserMemory(userId);
+    res.json({ memory });
+  } else {
+    try {
+      if (fs.existsSync('./memory.json')) {
+        res.json({ memory: JSON.parse(fs.readFileSync('./memory.json', 'utf-8')) });
+      } else {
+        res.json({ memory: {} });
+      }
+    } catch(e) {
       res.json({ memory: {} });
     }
-  } catch(e) {
-    res.json({ memory: {} });
   }
 });
 
-app.post('/api/memory', (req, res) => {
-  try {
-    const existing = fs.existsSync('./memory.json') ? JSON.parse(fs.readFileSync('./memory.json', 'utf-8')) : {};
+app.post('/api/memory', async (req, res) => {
+  const userId = req.body.userId;
+  if (userId && db) {
+    const existing = await getUserMemory(userId);
     const updated = Object.assign({}, existing, req.body);
-    fs.writeFileSync('./memory.json', JSON.stringify(updated, null, 2));
+    delete updated.userId;
+    await saveUserMemory(userId, updated);
     res.json({ success: true });
-  } catch(e) {
-    res.json({ success: false, error: e.message });
+  } else {
+    try {
+      const existing = fs.existsSync('./memory.json') ? JSON.parse(fs.readFileSync('./memory.json', 'utf-8')) : {};
+      fs.writeFileSync('./memory.json', JSON.stringify(Object.assign({}, existing, req.body), null, 2));
+      res.json({ success: true });
+    } catch(e) {
+      res.json({ success: false, error: e.message });
+    }
   }
 });
 
@@ -324,11 +410,14 @@ app.get('*', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log('Nexus running on port ' + PORT);
-  setInterval(() => {
-    fetch('https://nexus-app-yzok.onrender.com/ping')
-      .then(() => console.log('Ping OK'))
-      .catch(() => console.log('Ping failed'));
-  }, 14 * 60 * 1000);
+
+connectDB().then(() => {
+  app.listen(PORT, () => {
+    console.log('Nexus running on port ' + PORT);
+    setInterval(() => {
+      fetch('https://nexus-app-yzok.onrender.com/ping')
+        .then(() => console.log('Ping OK'))
+        .catch(() => console.log('Ping failed'));
+    }, 14 * 60 * 1000);
+  });
 });
