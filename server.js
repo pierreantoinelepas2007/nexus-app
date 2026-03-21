@@ -18,7 +18,7 @@ try {
       memoryContext = `\n\nMEMOIRE UTILISATEUR:\n${JSON.stringify(memory, null, 2)}`;
     }
   }
-} catch(e) {}
+} catch(e) body
   if (accessToken) {
     try {
       // Gmail
@@ -116,13 +116,27 @@ const response = await fetch('https://api.anthropic.com/v1/messages', {
       'x-api-key': process.env.ANTHROPIC_API_KEY,
       'anthropic-version': '2023-06-01'
     },
-    body: JSON.stringify({
+   body: JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 1024,
       system: system,
-      messages: messages
+      messages: messages.map(m => {
+        if (Array.isArray(m.content)) {
+          return {
+            role: m.role,
+            content: m.content.map(c => {
+              if (c.type === 'image_url') {
+                const base64 = c.image_url.url.split(',')[1];
+                const mediaType = c.image_url.url.split(';')[0].split(':')[1];
+                return { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } };
+              }
+              return { type: 'text', text: c.text };
+            })
+          };
+        }
+        return m;
+      })
     })
-  });
 
   const data = await response.json();
   console.log('Claude response:', JSON.stringify(data).slice(0, 200));
