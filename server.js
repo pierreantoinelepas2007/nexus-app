@@ -11,6 +11,7 @@ app.use(express.static('.'));
 let db;
 async function connectDB() {
   try {
+    console.log('MongoDB URI:', process.env.MONGODB_URI ? 'définie' : 'MANQUANTE');
     const client = new MongoClient(process.env.MONGODB_URI);
     await client.connect();
     db = client.db('nexus');
