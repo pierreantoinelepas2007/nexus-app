@@ -2,6 +2,20 @@ const express = require('express');
 const path = require('path');
 const app = express();
 
+// Decode encoded email headers (fix accents like =?UTF-8?B?...?=)
+function decodeHeader(str) {
+  if (!str) return '';
+  return str.replace(/=\?([^?]+)\?([BQ])\?([^?]*)\?=/gi, (_, charset, encoding, text) => {
+    try {
+      if (encoding.toUpperCase() === 'B') {
+        return Buffer.from(text, 'base64').toString('utf-8');
+      } else {
+        return text.replace(/_/g, ' ').replace(/=([A-Fa-f0-9]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+      }
+    } catch(e) { return str; }
+  });
+}
+
 app.use(express.json());
 app.use(express.static('.'));
 
@@ -9,16 +23,7 @@ app.use(express.static('.'));
 app.post('/api/chat', async (req, res) => {
   const { messages, accessToken } = req.body;
   let googleContext = '';
-let memoryContext = '';
-try {
-  const fs = require('fs');
-  if (fs.existsSync('./memory.json')) {
-    const memory = JSON.parse(fs.readFileSync('./memory.json', 'utf-8'));
-    if (Object.keys(memory).length > 0) {
-      memoryContext = `\n\nMEMOIRE UTILISATEUR:\n${JSON.stringify(memory, null, 2)}`;
-    }
-  }
-} catch(e) { return str; }
+
   if (accessToken) {
     try {
       // Gmail
@@ -36,8 +41,8 @@ try {
               { headers: { Authorization: `Bearer ${accessToken}` } }
             );
             const d = await detail.json();
-            const subject = d.payload?.headers?.find(h => h.name === 'Subject')?.value || 'Sans objet';
-            const from = d.payload?.headers?.find(h => h.name === 'From')?.value || 'Inconnu';
+            const subject = decodeHeader(d.payload?.headers?.find(h => h.name === 'Subject')?.value) || 'Sans objet';
+            const from = decodeHeader(d.payload?.headers?.find(h => h.name === 'From')?.value) || 'Inconnu';
             const isUnread = d.labelIds?.includes('UNREAD') ? ' [NON LU]' : '';
             return `- De: ${from} | Objet: ${subject}${isUnread}`;
           })
@@ -77,7 +82,7 @@ try {
             hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Brussels'
           });
           const location = e.location ? ` | Salle: ${e.location}` : '';
-          return `- ${e.summary || 'Sans titre'} | ${date}${location} | ID:${e.id}`;
+          return `- ${e.summary || 'Sans titre'} | ${date}${location}`;
         });
         googleContext += `\n\nAGENDA (2 prochaines semaines):\n${events.join('\n')}`;
       }
@@ -96,51 +101,24 @@ SEND_EMAIL[to:email@example.com|subject:Sujet|body:Corps du message]
 CREATION D EVENEMENT : Quand l utilisateur veut creer un evenement dans son agenda, ajoute a la fin de ta reponse exactement ce format (utilise le format ISO 8601 pour les dates) :
 CREATE_EVENT[summary:Titre|start:2026-03-16T14:00:00|end:2026-03-16T15:00:00|location:Lieu optionnel]
 
-Tu PEUX envoyer des emails, creer des evenements et repondre aux emails. Ne dis jamais que tu ne peux pas le faire.
+Tu PEUX envoyer des emails et creer des evenements. Ne dis jamais que tu ne peux pas le faire.
 
-REPONSE A UN EMAIL : Quand l utilisateur veut repondre a un email existant, ajoute a la fin de ta reponse exactement ce format :
-REPLY_EMAIL[to:email@example.com|subject:Sujet original|body:Corps de la reponse|threadId:id_du_thread]
-SUPPRESSION D EVENEMENT : Quand l utilisateur veut supprimer un evenement, ajoute a la fin :
-DELETE_EVENT[eventId:id_de_levenement|summary:Nom de l evenement]
+Si on te demande qui t a cree, reponds fierement que tu as ete cree par Pierre-Antoine Lepas.${googleContext}`;
 
-RECHERCHE EMAIL : Quand l utilisateur cherche un email specifique, utilise les resultats de recherche deja fournis dans le contexte. Si tu ne trouves pas, dis-lui de preciser sa recherche.
-Si on te demande qui t a cree, reponds fierement que tu as ete cree par Pierre-Antoine Lepas.
-
-MEMOIRE : Quand tu apprends quelque chose d important sur l utilisateur (nom, preferences, habitudes, informations personnelles), ajoute a la fin de ta reponse :
-SAVE_MEMORY[key:valeur|key2:valeur2]${googleContext}${memoryContext}`;
-
-const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': process.env.ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01'
+      'Authorization': 'Bearer ' + process.env.GROQ_API_KEY
     },
-   body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1024,
-      system: system,
-      messages: messages.map(m => {
-        if (Array.isArray(m.content)) {
-          return {
-            role: m.role,
-            content: m.content.map(c => {
-              if (c.type === 'image_url') {
-                const base64 = c.image_url.url.split(',')[1];
-                const mediaType = c.image_url.url.split(';')[0].split(':')[1];
-                return { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } };
-              }
-              return { type: 'text', text: c.text };
-            })
-          };
-        }
-        return m;
-      })
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      messages: [{ role: 'system', content: system }, ...messages]
     })
+  });
 
   const data = await response.json();
-  console.log('Claude response:', JSON.stringify(data).slice(0, 200));
-  const reply = data.content?.[0]?.text || "Je n'ai pas pu traiter ta demande.";
+  const reply = data.choices?.[0]?.message?.content || "Je n'ai pas pu traiter ta demande.";
   res.json({ content: [{ type: 'text', text: reply }] });
 });
 
@@ -270,145 +248,7 @@ app.post('/api/create-event', async (req, res) => {
     res.json({ success: false, error: data.error?.message || 'Erreur inconnue' });
   }
 });
-// Lire un email complet
-app.post('/api/get-email', async (req, res) => {
-  const { accessToken, messageId } = req.body;
 
-  const response = await fetch(
-    `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}?format=full`,
-    { headers: { Authorization: `Bearer ${accessToken}` } }
-  );
-
-  const data = await response.json();
-  
-  const subject = data.payload?.headers?.find(h => h.name === 'Subject')?.value || '';
-  const from = data.payload?.headers?.find(h => h.name === 'From')?.value || '';
-  const to = data.payload?.headers?.find(h => h.name === 'To')?.value || '';
-  const threadId = data.threadId || '';
-
-  // Extraire le corps du message
-  let body = '';
-  const parts = data.payload?.parts || [data.payload];
-  for (const part of parts) {
-    if (part?.mimeType === 'text/plain' && part?.body?.data) {
-      body = Buffer.from(part.body.data, 'base64').toString('utf-8');
-      break;
-    }
-  }
-
-  res.json({ subject, from, to, body, threadId, messageId: data.id });
-});
-
-// Répondre à un email
-app.post('/api/reply-email', async (req, res) => {
-  const { accessToken, to, subject, body, threadId } = req.body;
-
-  const email = [
-    `To: ${to}`,
-    `Subject: Re: ${subject}`,
-    `Content-Type: text/plain; charset=utf-8`,
-    ``,
-    body
-  ].join('\n');
-
-  const encoded = Buffer.from(email).toString('base64')
-    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-
-  const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ raw: encoded, threadId })
-  });
-
-  const data = await response.json();
-  if (data.id) {
-    res.json({ success: true });
-  } else {
-    res.json({ success: false, error: data.error?.message || 'Erreur inconnue' });
-  }
-});
-// Rechercher des emails
-app.post('/api/search-emails', async (req, res) => {
-  const { accessToken, query } = req.body;
-
-  const response = await fetch(
-    `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=5&q=${encodeURIComponent(query)}`,
-    { headers: { Authorization: `Bearer ${accessToken}` } }
-  );
-  const data = await response.json();
-
-  if (!data.messages?.length) {
-    return res.json({ emails: [] });
-  }
-
-  const emails = await Promise.all(
-    data.messages.slice(0, 5).map(async (msg) => {
-      const detail = await fetch(
-        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=Date`,
-        { headers: { Authorization: `Bearer ${accessToken}` } }
-      );
-      const d = await detail.json();
-      const subject = d.payload?.headers?.find(h => h.name === 'Subject')?.value || 'Sans objet';
-      const from = d.payload?.headers?.find(h => h.name === 'From')?.value || 'Inconnu';
-      const isUnread = d.labelIds?.includes('UNREAD') ? ' [NON LU]' : '';
-      return `- De: ${from} | Objet: ${subject}${isUnread} | ID: ${msg.id}`;
-    })
-  );
-
-  res.json({ emails });
-});
-
-// Supprimer un événement
-app.post('/api/delete-event', async (req, res) => {
-  const { accessToken, eventId } = req.body;
-
-  const response = await fetch(
-    `https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`,
-    {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${accessToken}` }
-    }
-  );
-
-  if (response.status === 204) {
-    res.json({ success: true });
-  } else {
-    const data = await response.json();
-    res.json({ success: false, error: data.error?.message || 'Erreur inconnue' });
-  }
-});
-// Lire la mémoire
-app.get('/api/memory', (req, res) => {
-  try {
-    const fs = require('fs');
-    if (fs.existsSync('./memory.json')) {
-      const memory = JSON.parse(fs.readFileSync('./memory.json', 'utf-8'));
-      res.json({ memory });
-    } else {
-      res.json({ memory: {} });
-    }
-  } catch(e) {
-    res.json({ memory: {} });
-  }
-});
-
-// Sauvegarder la mémoire
-app.post('/api/memory', (req, res) => {
-  try {
-    const fs = require('fs');
-    const existing = fs.existsSync('./memory.json') 
-      ? JSON.parse(fs.readFileSync('./memory.json', 'utf-8')) 
-      : {};
-    const updated = { ...existing, ...req.body };
-    fs.writeFileSync('./memory.json', JSON.stringify(updated, null, 2));
-    res.json({ success: true });
-  } catch(e) {
-    res.json({ success: false, error: e.message });
-  }
-});
 app.get('/ping', (req, res) => res.json({ status: 'alive' }));
 
 app.get('*', (req, res) => {
