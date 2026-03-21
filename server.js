@@ -109,21 +109,24 @@ Si on te demande qui t a cree, reponds fierement que tu as ete cree par Pierre-A
 MEMOIRE : Quand tu apprends quelque chose d important sur l utilisateur (nom, preferences, habitudes, informations personnelles), ajoute a la fin de ta reponse :
 SAVE_MEMORY[key:valeur|key2:valeur2]${googleContext}${memoryContext}`;
 
-  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + process.env.GROQ_API_KEY
+      'x-api-key': process.env.ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01'
     },
     body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
-      messages: [{ role: 'system', content: system }, ...messages]
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1024,
+      system: system,
+      messages: messages
     })
   });
 
   const data = await response.json();
-console.log('Groq response:', JSON.stringify(data).slice(0, 200));
-const reply = data.choices?.[0]?.message?.content || "Je n'ai pas pu traiter ta demande.";
+  console.log('Claude response:', JSON.stringify(data).slice(0, 200));
+  const reply = data.content?.[0]?.text || "Je n'ai pas pu traiter ta demande.";
   res.json({ content: [{ type: 'text', text: reply }] });
 });
 
