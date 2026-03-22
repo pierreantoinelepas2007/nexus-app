@@ -1,0 +1,17 @@
+{
+  "name": "Nexus",
+  "short_name": "Nexus",
+  "description": "Ton assistant IA personnel",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f0f10",
+  "theme_color": "#0f0f10",
+  "icons": [
+    {
+      "src": "/nexus_icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}      
