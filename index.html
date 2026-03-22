@@ -245,11 +245,15 @@ window.MathJax = {
 </div>
 
 <script>
-let messages=[], accessToken=null, voiceEnabled=false, hasGoogle=false, currentImage=null, recognition=null, isRecording=false;
+let messages=[], accessToken=null, userId=null, voiceEnabled=false, hasGoogle=false, currentImage=null, recognition=null, isRecording=false;
 
 function init() {
   const params = new URLSearchParams(window.location.search);
-  const token = params.get('access_token'), refresh = params.get('refresh_token');
+  const token = params.get('access_token');
+const refresh = params.get('refresh_token');
+const uid = params.get('user_id');
+if (uid) { userId = decodeURIComponent(uid); localStorage.setItem('nexus_user_id', userId); }
+userId = userId || localStorage.getItem('nexus_user_id');
   if (token) {
     accessToken=token; hasGoogle=true;
     if(refresh) localStorage.setItem('nexus_refresh',refresh);
@@ -469,8 +473,9 @@ async function sendMessage(){
   addTyping();
 
   try{
-    const body={messages};
-    if(hasGoogle&&accessToken)body.accessToken=accessToken;
+    const body = { messages };
+if (hasGoogle && accessToken) body.accessToken = accessToken;
+if (userId) body.userId = userId;
     const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const data=await res.json();
     removeTyping();
