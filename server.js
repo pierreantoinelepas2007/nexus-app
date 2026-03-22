@@ -405,7 +405,9 @@ app.post('/api/memory', async (req, res) => {
 });
 
 app.get('/ping', (req, res) => res.json({ status: 'alive' }));
-
+app.get('/manifest.json', (req, res) => {
+  res.sendFile(path.join(__dirname, 'manifest.json'));
+});
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
