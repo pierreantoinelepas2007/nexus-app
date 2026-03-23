@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Nexus</title>
@@ -9,12 +8,12 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Nexus">
 <meta name="theme-color" content="#0f0f10">
-<link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" sizes="180x180" href="/nexus_icon.png">
 <link rel="apple-touch-icon" sizes="152x152" href="/nexus_icon.png">
 <link rel="apple-touch-icon" sizes="120x120" href="/nexus_icon.png">
 <link rel="icon" type="image/png" href="/nexus_icon.png">
 <link rel="shortcut icon" href="/nexus_icon.png">
+<link rel="manifest" href="/manifest.json">
 <style>
   html { height: -webkit-fill-available; }
   body { min-height: -webkit-fill-available; }
@@ -45,9 +44,36 @@ window.MathJax = {
     --math-color: #86efac;
     --math-bg: rgba(52,211,153,0.08);
   }
+  body.light {
+    --bg: #f8fafc;
+    --surface: #ffffff;
+    --surface2: #f1f5f9;
+    --border: #e2e8f0;
+    --text: #0f172a;
+    --muted: #64748b;
+    --accent: #059669;
+    --accent2: #047857;
+    --user-bubble: #dbeafe;
+    --ai-bubble: #ffffff;
+    --math-color: #065f46;
+    --math-bg: rgba(5,150,105,0.08);
+  }
+  body.light .logo-mark,
+  body.light .logo-sm,
+  body.light .welcome-icon { background: linear-gradient(135deg, #d1fae5, #a7f3d0); border-color: #34d399; color: #065f46; }
+  body.light .status-dot, body.light .user-badge .dot { background: #059669; box-shadow: 0 0 6px #059669; }
+  body.light .btn-send { background: #047857; color: white; }
+  body.light .btn-send:hover { background: #065f46; }
+  body.light .bubble code:not(pre code) { background: rgba(5,150,105,0.08); border-color: rgba(5,150,105,0.2); color: #065f46; }
+  body.light .msg.user .bubble { background: var(--user-bubble); border-color: #bfdbfe; color: #1e3a5f; }
+  body.light .bubble strong { color: #047857; }
+  body.light .bubble em { color: #065f46; }
+  body.light .bubble pre { background: #f8fafc; border-color: #e2e8f0; }
+  body.light .action-body { background: #f1f5f9; }
+ 
   * { -webkit-font-smoothing: antialiased; }
-  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
-
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); height: 100dvh; display: flex; flex-direction: column; overflow: hidden; transition: background 0.2s, color 0.2s; }
+ 
   /* LOGIN */
   #login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100dvh; gap: 2rem; padding: 2rem; }
   .logo-mark { width: 64px; height: 64px; border-radius: 18px; background: linear-gradient(135deg, #064e3b, #065f46); border: 1px solid #059669; display: flex; align-items: center; justify-content: center; font-family: 'DM Mono', monospace; font-size: 1.5rem; color: var(--accent); letter-spacing: -2px; }
@@ -57,15 +83,15 @@ window.MathJax = {
   .login-box { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 2rem; width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 1rem; }
   .login-box p { font-size: 0.85rem; color: var(--muted); text-align: center; line-height: 1.5; }
   .btn-google { display: flex; align-items: center; justify-content: center; gap: 0.75rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 1.25rem; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: all 0.15s; text-decoration: none; }
-  .btn-google:hover { background: #2a2a30; border-color: #3f3f46; }
+  .btn-google:hover { filter: brightness(1.05); }
   .divider { display: flex; align-items: center; gap: 0.75rem; color: var(--muted); font-size: 0.75rem; }
   .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
   .btn-skip { background: none; border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 1.25rem; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 0.85rem; cursor: pointer; transition: all 0.15s; }
-  .btn-skip:hover { color: var(--text); border-color: #3f3f46; }
-
+  .btn-skip:hover { color: var(--text); }
+ 
   /* APP */
   #app { display: none; flex-direction: column; height: 100dvh; }
-
+ 
   /* HEADER */
   header { display: flex; align-items: center; justify-content: space-between; padding: 0.875rem 1.25rem; border-bottom: 1px solid var(--border); background: var(--bg); flex-shrink: 0; }
   .header-left { display: flex; align-items: center; gap: 0.75rem; }
@@ -77,15 +103,15 @@ window.MathJax = {
   .user-badge { display: flex; align-items: center; gap: 0.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.35rem 0.75rem; font-size: 0.8rem; color: var(--muted); }
   .user-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent2); }
   .btn-icon { background: none; border: 1px solid var(--border); border-radius: 8px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; color: var(--muted); cursor: pointer; transition: all 0.15s; font-size: 1rem; }
-  .btn-icon:hover { color: var(--text); border-color: #3f3f46; background: var(--surface); }
+  .btn-icon:hover { color: var(--text); border-color: var(--muted); background: var(--surface); }
   .btn-icon.active { color: var(--accent); border-color: #059669; background: #064e3b22; }
-
+ 
   /* QUICK ACTIONS */
   .quick-actions { display: flex; gap: 0.5rem; padding: 0.75rem 1.25rem; overflow-x: auto; scrollbar-width: none; flex-shrink: 0; border-bottom: 1px solid var(--border); }
   .quick-actions::-webkit-scrollbar { display: none; }
   .chip { display: flex; align-items: center; gap: 0.4rem; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 0.4rem 0.875rem; font-size: 0.8rem; color: var(--muted); cursor: pointer; white-space: nowrap; transition: all 0.15s; flex-shrink: 0; }
-  .chip:hover { color: var(--text); border-color: #3f3f46; background: var(--surface2); }
-
+  .chip:hover { color: var(--text); background: var(--surface2); }
+ 
   /* MESSAGES */
   #messages { flex: 1; overflow-y: auto; padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
   .msg { display: flex; flex-direction: column; gap: 0.25rem; max-width: 85%; animation: fadeUp 0.2s ease; }
@@ -96,17 +122,13 @@ window.MathJax = {
   .msg.user .bubble { background: var(--user-bubble); border: 1px solid #2d3f55; border-bottom-right-radius: 4px; color: #cbd5e1; }
   .msg.ai .bubble { background: var(--ai-bubble); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
   .msg-label { font-size: 0.7rem; color: var(--muted); padding: 0 0.25rem; font-family: 'DM Mono', monospace; }
-
-  /* Message image */
   .msg-image { max-width: 260px; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 0.5rem; display: block; }
-
-  /* Copy button */
+ 
   .copy-msg-btn { position: absolute; top: 0.4rem; right: 0.4rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; padding: 0.15rem 0.4rem; font-size: 0.6rem; color: var(--muted); cursor: pointer; font-family: 'DM Mono', monospace; opacity: 0; transition: opacity 0.15s; }
   .bubble:hover .copy-msg-btn { opacity: 1; }
-  .copy-msg-btn:hover { color: var(--text); border-color: #3f3f46; }
+  .copy-msg-btn:hover { color: var(--text); }
   .copy-msg-btn.copied { color: var(--accent2); }
-
-  /* Markdown in AI bubbles */
+ 
   .bubble strong { color: var(--accent); font-weight: 600; }
   .bubble em { color: #a3c4a0; font-style: italic; }
   .bubble h1,.bubble h2,.bubble h3 { color: var(--text); font-weight: 600; margin: 0.75rem 0 0.4rem; }
@@ -114,35 +136,27 @@ window.MathJax = {
   .bubble ul,.bubble ol { margin: 0.4rem 0 0.4rem 1.2rem; }
   .bubble li { margin-bottom: 0.25rem; }
   .bubble p { margin-bottom: 0.5rem; } .bubble p:last-child { margin-bottom: 0; }
-
-  /* Code blocks */
   .bubble pre { background: #0d1117; border: 1px solid #2d3748; border-radius: 8px; padding: 0.875rem; overflow-x: auto; margin: 0.5rem 0; font-size: 0.78rem; line-height: 1.5; position: relative; }
   .bubble pre .copy-code-btn { position: absolute; top: 0.4rem; right: 0.4rem; background: #1a2332; border: 1px solid #2d3748; border-radius: 4px; padding: 0.15rem 0.4rem; font-size: 0.6rem; color: #6b7280; cursor: pointer; font-family: 'DM Mono', monospace; transition: all 0.15s; }
   .bubble pre .copy-code-btn:hover { color: var(--text); }
   .bubble pre .copy-code-btn.copied { color: var(--accent2); }
   .bubble code:not(pre code) { background: rgba(52,211,153,0.08); border: 1px solid rgba(52,211,153,0.15); border-radius: 4px; padding: 0.1em 0.35em; font-size: 0.82em; font-family: 'DM Mono', monospace; color: var(--accent); }
-
-  /* MATH — well visible */
-  .bubble .math-inline { display: inline-block; background: var(--math-bg); border: 1px solid rgba(52,211,153,0.2); border-radius: 4px; padding: 0.05em 0.4em; color: var(--math-color); font-size: 1em; }
-  .bubble .math-display { display: block; background: var(--math-bg); border: 1px solid rgba(52,211,153,0.2); border-radius: 8px; padding: 0.75rem 1rem; margin: 0.5rem 0; text-align: center; color: var(--math-color); overflow-x: auto; }
+ 
   mjx-container { color: var(--math-color) !important; }
   mjx-container[display="true"] { display: block !important; background: var(--math-bg) !important; border: 1px solid rgba(52,211,153,0.2) !important; border-radius: 8px !important; padding: 0.75rem !important; margin: 0.5rem 0 !important; }
-
-  /* TYPING */
+ 
   .typing .bubble { display: flex; align-items: center; gap: 4px; padding: 0.875rem 1rem; }
   .typing-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: bounce 1.2s infinite; }
   .typing-dot:nth-child(2){animation-delay:0.2s} .typing-dot:nth-child(3){animation-delay:0.4s}
   @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px);background:var(--accent)} }
-
-  /* WELCOME */
+ 
   .welcome { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; gap: 0.75rem; padding: 2rem; text-align: center; }
   .welcome-icon { width: 56px; height: 56px; border-radius: 16px; background: linear-gradient(135deg, #064e3b, #065f46); border: 1px solid #059669; display: flex; align-items: center; justify-content: center; font-family: 'DM Mono', monospace; font-size: 1.25rem; color: var(--accent); letter-spacing: -1px; margin-bottom: 0.5rem; }
   .welcome h2 { font-size: 1.25rem; font-weight: 400; }
   .welcome p { font-size: 0.85rem; color: var(--muted); max-width: 280px; line-height: 1.6; }
-
-  /* INPUT */
+ 
   .input-area { padding: 1rem 1.25rem; border-top: 1px solid var(--border); background: var(--bg); flex-shrink: 0; }
-  #image-preview-container { display: none; margin-bottom: 0.5rem; position: relative; display: inline-block; }
+  #image-preview-container { display: none; margin-bottom: 0.5rem; position: relative; }
   #image-preview { max-height: 70px; border-radius: 8px; border: 1px solid var(--border); display: block; }
   #remove-image { position: absolute; top: -6px; right: -6px; background: #ef4444; border: none; border-radius: 50%; width: 18px; height: 18px; color: white; font-size: 0.6rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
   .input-row { display: flex; align-items: flex-end; gap: 0.625rem; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 0.625rem 0.625rem 0.625rem 1rem; transition: border-color 0.15s; }
@@ -151,15 +165,14 @@ window.MathJax = {
   #input::placeholder { color: var(--muted); }
   .input-actions { display: flex; gap: 0.375rem; align-items: center; }
   .btn-tool { background: none; border: 1px solid var(--border); border-radius: 8px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--muted); transition: all 0.15s; font-size: 0.95rem; flex-shrink: 0; }
-  .btn-tool:hover { color: var(--text); border-color: #3f3f46; background: var(--surface2); }
+  .btn-tool:hover { color: var(--text); background: var(--surface2); }
   .btn-tool.recording { color: #f87171; border-color: #f87171; background: rgba(248,113,113,0.1); animation: micPulse 1s infinite; }
   @keyframes micPulse { 0%,100%{box-shadow:0 0 0 0 rgba(248,113,113,0.3)} 50%{box-shadow:0 0 0 5px rgba(248,113,113,0)} }
   .btn-send { background: var(--accent2); border: none; border-radius: 9px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #022c22; transition: all 0.15s; flex-shrink: 0; }
   .btn-send:hover { background: var(--accent); transform: scale(1.05); }
   .btn-send:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
   .char-hint { font-size: 0.7rem; color: var(--muted); text-align: center; margin-top: 0.5rem; font-family: 'DM Mono', monospace; }
-
-  /* ACTION CARDS */
+ 
   .action-card { border-radius: 12px; padding: 0.875rem 1rem; margin: 0 0 0.5rem; }
   .action-card.email-t, .action-card.reply-t { border: 1px solid #059669; background: rgba(5,150,105,0.05); }
   .action-card.event-t { border: 1px solid #3b82f6; background: rgba(59,130,246,0.05); }
@@ -177,15 +190,15 @@ window.MathJax = {
   .btn-confirm.red { background: #f87171; color: white; } .btn-confirm.red:hover { filter: brightness(0.9); }
   .btn-cancel-action { background: none; border: 1px solid var(--border); border-radius: 7px; padding: 0.4rem 0.875rem; color: var(--muted); cursor: pointer; font-size: 0.8rem; font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
   .btn-cancel-action:hover { color: var(--text); }
-
+ 
   #messages::-webkit-scrollbar { width: 4px; }
   #messages::-webkit-scrollbar-track { background: transparent; }
   #messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 </style>
 </head>
 <body>
-
-<div id="login-screen">
+ 
+<div id="login-screen" style="display:none">
   <div class="logo-mark">Nx</div>
   <div class="login-title"><h1>Nexus</h1><p>Ton assistant IA personnel</p></div>
   <div class="login-box">
@@ -198,8 +211,8 @@ window.MathJax = {
     <button class="btn-skip" onclick="startWithoutGoogle()">Utiliser sans Gmail / Agenda</button>
   </div>
 </div>
-
-<div id="app">
+ 
+<div id="app" style="display:none">
   <header>
     <div class="header-left">
       <div class="logo-sm">Nx</div>
@@ -207,12 +220,13 @@ window.MathJax = {
       <div class="status-dot"></div>
     </div>
     <div class="header-right">
-      <div class="user-badge" id="user-badge" style="display:none"><div class="dot"></div><span>Google</span></div>
+      <div class="user-badge" id="user-badge" style="display:none"><div class="dot"></div><span id="user-email-label">Google</span></div>
+      <button class="btn-icon" id="btn-theme" title="Thème" onclick="toggleTheme()">☀️</button>
       <button class="btn-icon" id="btn-voice" title="Voix" onclick="toggleVoice()">🔈</button>
-      <button class="btn-icon" onclick="logout()">↩</button>
+      <button class="btn-icon" onclick="logout()" title="Déconnexion">↩</button>
     </div>
   </header>
-
+ 
   <div class="quick-actions">
     <button class="chip" onclick="quickAsk('Resume mes 5 derniers emails')"><span>📧</span> Emails</button>
     <button class="chip" onclick="quickAsk('Quels sont mes rendez-vous aujourd\'hui ?')"><span>📅</span> Agenda</button>
@@ -221,7 +235,7 @@ window.MathJax = {
     <button class="chip" onclick="quickAsk('Quels emails sont non lus ?')"><span>🔔</span> Non lus</button>
     <button class="chip" onclick="quickAsk('Donne-moi mon briefing du matin')"><span>☀️</span> Briefing</button>
   </div>
-
+ 
   <div id="messages">
     <div class="welcome" id="welcome">
       <div class="welcome-icon">Nx</div>
@@ -229,7 +243,7 @@ window.MathJax = {
       <p id="welcome-sub">Pose-moi n'importe quelle question, colle une image ou parle-moi.</p>
     </div>
   </div>
-
+ 
   <div class="input-area">
     <div id="image-preview-container" style="display:none">
       <img id="image-preview" src="" alt=""/>
@@ -249,343 +263,392 @@ window.MathJax = {
     <div class="char-hint">Entree pour envoyer · Maj+Entree nouvelle ligne · 🎤 parler · Ctrl+V coller image</div>
   </div>
 </div>
-
+ 
 <script>
-let messages=[], accessToken=null, userId=null, voiceEnabled=false, hasGoogle=false, currentImage=null, recognition=null, isRecording=false;
-
-function init() {
-  const params = new URLSearchParams(window.location.search);
-  const token = params.get('access_token');
-const refresh = params.get('refresh_token');
-const uid = params.get('user_id');
-if (uid) { userId = decodeURIComponent(uid); localStorage.setItem('nexus_user_id', userId); }
-userId = userId || localStorage.getItem('nexus_user_id');
-  if (token) {
-    accessToken=token; hasGoogle=true;
-    if(refresh) localStorage.setItem('nexus_refresh',refresh);
-    localStorage.setItem('nexus_token',token);
-    localStorage.setItem('nexus_token_time',Date.now().toString());
-    window.history.replaceState({},'','/');
-    showApp(true);
-  } else {
-    const saved=localStorage.getItem('nexus_token');
-    const age=Date.now()-parseInt(localStorage.getItem('nexus_token_time')||'0');
-    if(saved&&age<55*60*1000){accessToken=saved;hasGoogle=true;showApp(true);}
-    else if(localStorage.getItem('nexus_refresh')){refreshAccessToken();}
-    else{document.getElementById('login-screen').style.display='flex';}
+let messages = [], voiceEnabled = false, currentImage = null, recognition = null, isRecording = false;
+ 
+// -- Helpers token (toujours lire depuis localStorage, fix iOS) --
+function getToken()   { return localStorage.getItem('nexus_token'); }
+function getRefresh() { return localStorage.getItem('nexus_refresh'); }
+function getUserId()  { return localStorage.getItem('nexus_user_id'); }
+function isGoogle()   { return !!(getToken() && getUserId()); }
+ 
+function setTokens(access, refresh, uid) {
+  if (access)  { localStorage.setItem('nexus_token', access); localStorage.setItem('nexus_token_time', Date.now().toString()); }
+  if (refresh) localStorage.setItem('nexus_refresh', refresh);
+  if (uid)     localStorage.setItem('nexus_user_id', uid);
+}
+ 
+// -- THEME --
+function toggleTheme() {
+  const isLight = document.body.classList.toggle('light');
+  localStorage.setItem('nexus_theme', isLight ? 'light' : 'dark');
+  document.getElementById('btn-theme').textContent = isLight ? '🌙' : '☀️';
+}
+function applyTheme() {
+  if (localStorage.getItem('nexus_theme') === 'light') {
+    document.body.classList.add('light');
+    const btn = document.getElementById('btn-theme');
+    if (btn) btn.textContent = '🌙';
   }
 }
-
-async function refreshAccessToken() {
-  const rt=localStorage.getItem('nexus_refresh');
-  if(!rt){document.getElementById('login-screen').style.display='flex';return;}
-  try{
-    const res=await fetch('/api/refresh',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({refresh_token:rt})});
-    const data=await res.json();
-    if(data.access_token){accessToken=data.access_token;hasGoogle=true;localStorage.setItem('nexus_token',accessToken);localStorage.setItem('nexus_token_time',Date.now().toString());showApp(true);}
-    else{localStorage.clear();document.getElementById('login-screen').style.display='flex';}
-  }catch(e){document.getElementById('login-screen').style.display='flex';}
+ 
+// -- INIT --
+async function init() {
+  applyTheme();
+  const params  = new URLSearchParams(window.location.search);
+  const token   = params.get('access_token');
+  const refresh = params.get('refresh_token');
+  const uid     = params.get('user_id');
+ 
+  if (token) {
+    // Retour OAuth
+    setTokens(token, refresh, uid ? decodeURIComponent(uid) : null);
+    window.history.replaceState({}, '', '/');
+    showApp();
+    return;
+  }
+ 
+  const saved = getToken();
+  const age   = Date.now() - parseInt(localStorage.getItem('nexus_token_time') || '0');
+ 
+  if (saved && age < 55 * 60 * 1000) {
+    showApp();
+  } else if (getRefresh()) {
+    await refreshAccessToken();
+  } else if (localStorage.getItem('nexus_no_google') === '1') {
+    showApp();
+  } else {
+    showLogin();
+  }
 }
-
-setInterval(async()=>{
-  const rt=localStorage.getItem('nexus_refresh');if(!rt)return;
-  const age=Date.now()-parseInt(localStorage.getItem('nexus_token_time')||'0');
-  if(age>50*60*1000) await refreshAccessToken();
-},60000);
-
-function showApp(wg) {
-  if(wg&&accessToken){localStorage.setItem('nexus_token',accessToken);document.getElementById('user-badge').style.display='flex';document.getElementById('welcome-sub').textContent='Gmail et Agenda connectes. Pose-moi n\'importe quelle question !';hasGoogle=true;}
-  document.getElementById('login-screen').style.display='none';
-  document.getElementById('app').style.display='flex';
+ 
+function showLogin() {
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+ 
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  const uid = getUserId();
+  if (uid) {
+    document.getElementById('user-badge').style.display = 'flex';
+    document.getElementById('user-email-label').textContent = uid.split('@')[0];
+    document.getElementById('welcome-sub').textContent = 'Gmail et Agenda connectes. Pose-moi n\'importe quelle question !';
+  }
   document.getElementById('input').focus();
   startChecks();
 }
-function startWithoutGoogle(){showApp(false);}
-function logout(){localStorage.clear();accessToken=null;hasGoogle=false;messages=[];document.getElementById('login-screen').style.display='flex';document.getElementById('app').style.display='none';}
-
-// IMAGE — file upload
-function handleImageUpload(e){
-  const file=e.target.files[0];if(!file)return;
-  const reader=new FileReader();
-  reader.onload=(ev)=>{setImage(ev.target.result);};
+ 
+function startWithoutGoogle() {
+  localStorage.setItem('nexus_no_google', '1');
+  showApp();
+}
+ 
+function logout() {
+  localStorage.clear();
+  messages = [];
+  showLogin();
+}
+ 
+// -- REFRESH TOKEN --
+async function refreshAccessToken() {
+  const rt = getRefresh();
+  if (!rt) { showLogin(); return; }
+  try {
+    const res  = await fetch('/api/refresh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh_token: rt }) });
+    const data = await res.json();
+    if (data.access_token) {
+      setTokens(data.access_token, null, null);
+      showApp();
+    } else {
+      localStorage.clear();
+      showLogin();
+    }
+  } catch(e) {
+    // Sur iOS, si réseau fail au démarrage, on affiche quand même l'app avec le vieux token
+    if (getToken()) { showApp(); } else { showLogin(); }
+  }
+}
+ 
+// Auto-refresh toutes les 50 min
+setInterval(async () => {
+  if (!getRefresh()) return;
+  const age = Date.now() - parseInt(localStorage.getItem('nexus_token_time') || '0');
+  if (age > 50 * 60 * 1000) await refreshAccessToken();
+}, 60 * 1000);
+ 
+// -- IMAGE --
+function handleImageUpload(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => setImage(ev.target.result);
   reader.readAsDataURL(file);
 }
-
-function setImage(dataUrl){
-  currentImage=dataUrl;
-  document.getElementById('image-preview').src=dataUrl;
-  document.getElementById('image-preview-container').style.display='block';
+function setImage(dataUrl) {
+  currentImage = dataUrl;
+  document.getElementById('image-preview').src = dataUrl;
+  document.getElementById('image-preview-container').style.display = 'block';
 }
-
-function removeImage(){currentImage=null;document.getElementById('image-preview-container').style.display='none';document.getElementById('file-input').value='';}
-
-// Ctrl+V paste image
+function removeImage() {
+  currentImage = null;
+  document.getElementById('image-preview-container').style.display = 'none';
+  document.getElementById('file-input').value = '';
+}
 document.addEventListener('paste', (e) => {
-  const items = e.clipboardData?.items;
-  if (!items) return;
+  const items = e.clipboardData?.items; if (!items) return;
   for (const item of items) {
     if (item.type.startsWith('image/')) {
-      const blob = item.getAsFile();
       const reader = new FileReader();
-      reader.onload = (ev) => {
-        setImage(ev.target.result);
-        // Ne pas envoyer automatiquement — juste afficher la preview
-      };
-      reader.readAsDataURL(blob);
-      e.preventDefault();
-      break;
+      reader.onload = (ev) => setImage(ev.target.result);
+      reader.readAsDataURL(item.getAsFile());
+      e.preventDefault(); break;
     }
   }
 });
-
-// MIC
-function toggleMic(){
-  if(!('webkitSpeechRecognition'in window)&&!('SpeechRecognition'in window)){addMessage('ai','Reconnaissance vocale non supportee.');return;}
-  if(isRecording){recognition&&recognition.stop();return;}
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  recognition=new SR();recognition.lang='fr-FR';recognition.continuous=false;recognition.interimResults=false;
-  recognition.onstart=()=>{isRecording=true;document.getElementById('btn-mic').classList.add('recording');};
-  recognition.onresult=(e)=>{const t=e.results[0][0].transcript;document.getElementById('input').value=t;autoResize(document.getElementById('input'));sendMessage();};
-  recognition.onend=()=>{isRecording=false;document.getElementById('btn-mic').classList.remove('recording');};
-  recognition.onerror=()=>{isRecording=false;document.getElementById('btn-mic').classList.remove('recording');};
+ 
+// -- MIC --
+function toggleMic() {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) { addMessage('ai', 'Reconnaissance vocale non supportee.'); return; }
+  if (isRecording) { recognition && recognition.stop(); return; }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR(); recognition.lang = 'fr-FR'; recognition.continuous = false; recognition.interimResults = false;
+  recognition.onstart  = () => { isRecording = true;  document.getElementById('btn-mic').classList.add('recording'); };
+  recognition.onresult = (e) => { const t = e.results[0][0].transcript; document.getElementById('input').value = t; autoResize(document.getElementById('input')); sendMessage(); };
+  recognition.onend    = () => { isRecording = false; document.getElementById('btn-mic').classList.remove('recording'); };
+  recognition.onerror  = () => { isRecording = false; document.getElementById('btn-mic').classList.remove('recording'); };
   recognition.start();
 }
-
-// VOICE OUTPUT
-function toggleVoice(){
-  voiceEnabled=!voiceEnabled;
-  const btn=document.getElementById('btn-voice');
-  btn.classList.toggle('active',voiceEnabled);
-  btn.textContent=voiceEnabled?'🔊':'🔈';
-  if(voiceEnabled) speak('Voix activee.');
+ 
+// -- VOICE OUTPUT --
+function toggleVoice() {
+  voiceEnabled = !voiceEnabled;
+  const btn = document.getElementById('btn-voice');
+  btn.classList.toggle('active', voiceEnabled);
+  btn.textContent = voiceEnabled ? '🔊' : '🔈';
+  if (voiceEnabled) speak('Voix activee.');
 }
-
-function speak(text){
-  if(!('speechSynthesis'in window))return;
+function speak(text) {
+  if (!('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
-  const clean=text.replace(/\*\*/g,'').replace(/<[^>]*>/g,'').replace(/\$[^$]*\$/g,'expression mathematique').replace(/```[\s\S]*?```/g,'bloc de code');
-  const utt=new SpeechSynthesisUtterance(clean);
-  utt.lang='fr-FR';utt.rate=0.92;utt.pitch=0.95;
-  const voices=window.speechSynthesis.getVoices();
-  const best=voices.find(v=>v.name.includes('Thomas')||v.name.includes('Amelie')||v.name.includes('Marie'))||voices.find(v=>v.lang.startsWith('fr'));
-  if(best)utt.voice=best;
+  const clean = text.replace(/\*\*/g, '').replace(/<[^>]*>/g, '').replace(/\$[^$]*\$/g, 'expression mathematique').replace(/```[\s\S]*?```/g, 'bloc de code');
+  const utt = new SpeechSynthesisUtterance(clean);
+  utt.lang = 'fr-FR'; utt.rate = 0.92; utt.pitch = 0.95;
+  const voices = window.speechSynthesis.getVoices();
+  const best = voices.find(v => v.name.includes('Thomas') || v.name.includes('Amelie') || v.name.includes('Marie')) || voices.find(v => v.lang.startsWith('fr'));
+  if (best) utt.voice = best;
   window.speechSynthesis.speak(utt);
 }
-if('speechSynthesis'in window) window.speechSynthesis.onvoiceschanged=()=>{};
-
-// MARKDOWN
-function renderMarkdown(text){
-  // Escape HTML
-  let h=text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  // Code blocks first
-  h=h.replace(/```(\w*)\n?([\s\S]*?)```/g,(_,lang,code)=>`<pre><button class="copy-code-btn" onclick="copyCode(this)">copier</button><code class="language-${lang}">${code.trim()}</code></pre>`);
-  // Inline code
-  h=h.replace(/`([^`\n]+)`/g,'<code>$1</code>');
-  // Headers
-  h=h.replace(/^### (.+)$/gm,'<h3>$1</h3>');
-  h=h.replace(/^## (.+)$/gm,'<h2>$1</h2>');
-  h=h.replace(/^# (.+)$/gm,'<h1>$1</h1>');
-  // Bold & italic
-  h=h.replace(/\*\*\*(.+?)\*\*\*/g,'<strong><em>$1</em></strong>');
-  h=h.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
-  h=h.replace(/\*([^*\n]+)\*/g,'<em>$1</em>');
-  // Lists
-  h=h.replace(/^[-*+] (.+)$/gm,'<li>$1</li>');
-  h=h.replace(/^(\d+)\. (.+)$/gm,'<li>$2</li>');
-  // Paragraphs
-  const lines=h.split('\n');
-  let result='',inList=false;
-  for(const line of lines){
-    if(line.startsWith('<li>')){
-      if(!inList){result+='<ul>';inList=true;}
-      result+=line;
-    }else{
-      if(inList){result+='</ul>';inList=false;}
-      if(line.trim()===''||line.startsWith('<h')||line.startsWith('<pre')){result+=line;}
-      else{result+='<p>'+line+'</p>';}
-    }
+if ('speechSynthesis' in window) window.speechSynthesis.onvoiceschanged = () => {};
+ 
+// -- MARKDOWN --
+function renderMarkdown(text) {
+  let h = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  h = h.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => `<pre><button class="copy-code-btn" onclick="copyCode(this)">copier</button><code class="language-${lang}">${code.trim()}</code></pre>`);
+  h = h.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+  h = h.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+  h = h.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+  h = h.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+  h = h.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+  h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  h = h.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+  h = h.replace(/^[-*+] (.+)$/gm, '<li>$1</li>');
+  h = h.replace(/^(\d+)\. (.+)$/gm, '<li>$2</li>');
+  const lines = h.split('\n'); let result = '', inList = false;
+  for (const line of lines) {
+    if (line.startsWith('<li>')) { if (!inList) { result += '<ul>'; inList = true; } result += line; }
+    else { if (inList) { result += '</ul>'; inList = false; } if (line.trim() === '' || line.startsWith('<h') || line.startsWith('<pre')) result += line; else result += '<p>' + line + '</p>'; }
   }
-  if(inList) result+='</ul>';
+  if (inList) result += '</ul>';
   return result;
 }
-
-function copyCode(btn){
-  const code=btn.nextElementSibling.textContent;
-  navigator.clipboard.writeText(code).then(()=>{btn.textContent='copie!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='copier';btn.classList.remove('copied');},2000);});
+function copyCode(btn) {
+  navigator.clipboard.writeText(btn.nextElementSibling.textContent).then(() => { btn.textContent = 'copie!'; btn.classList.add('copied'); setTimeout(() => { btn.textContent = 'copier'; btn.classList.remove('copied'); }, 2000); });
 }
-
-// MESSAGES
-function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}}
-function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}
-function quickAsk(text){document.getElementById('input').value=text;sendMessage();}
-
-function addMessage(role,text,imageData){
-  const welcome=document.getElementById('welcome');if(welcome)welcome.remove();
-  const container=document.getElementById('messages');
-  const div=document.createElement('div');div.className='msg '+role;
-  const label=document.createElement('div');label.className='msg-label';label.textContent=role==='user'?'Toi':'Nexus';
-  const bubble=document.createElement('div');bubble.className='bubble';
-
-  if(imageData){const img=document.createElement('img');img.src=imageData;img.className='msg-image';bubble.appendChild(img);}
-
-  const textDiv=document.createElement('div');
-  if(role==='ai'){
-    textDiv.innerHTML=renderMarkdown(text);
-    setTimeout(()=>{textDiv.querySelectorAll('pre code').forEach(el=>hljs.highlightElement(el));},10);
-    if(window.MathJax) setTimeout(()=>MathJax.typesetPromise([textDiv]).catch(()=>{}),50);
-  }else{
-    textDiv.style.cssText='white-space:pre-wrap;word-break:break-word;';
-    textDiv.textContent=text;
+ 
+// -- MESSAGES --
+function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
+function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
+function quickAsk(text) { document.getElementById('input').value = text; sendMessage(); }
+ 
+function addMessage(role, text, imageData) {
+  const welcome = document.getElementById('welcome'); if (welcome) welcome.remove();
+  const container = document.getElementById('messages');
+  const div = document.createElement('div'); div.className = 'msg ' + role;
+  const label = document.createElement('div'); label.className = 'msg-label'; label.textContent = role === 'user' ? 'Toi' : 'Nexus';
+  const bubble = document.createElement('div'); bubble.className = 'bubble';
+  if (imageData) { const img = document.createElement('img'); img.src = imageData; img.className = 'msg-image'; bubble.appendChild(img); }
+  const textDiv = document.createElement('div');
+  if (role === 'ai') {
+    textDiv.innerHTML = renderMarkdown(text);
+    setTimeout(() => { textDiv.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el)); }, 10);
+    if (window.MathJax) setTimeout(() => MathJax.typesetPromise([textDiv]).catch(() => {}), 50);
+  } else {
+    textDiv.style.cssText = 'white-space:pre-wrap;word-break:break-word;';
+    textDiv.textContent = text;
   }
   bubble.appendChild(textDiv);
-
-  // Copy button
-  const copyBtn=document.createElement('button');
-  copyBtn.className='copy-msg-btn';copyBtn.textContent='📋';
-  copyBtn.onclick=()=>{navigator.clipboard.writeText(text).then(()=>{copyBtn.textContent='✓';copyBtn.classList.add('copied');setTimeout(()=>{copyBtn.textContent='📋';copyBtn.classList.remove('copied');},2000);});};
+  const copyBtn = document.createElement('button'); copyBtn.className = 'copy-msg-btn'; copyBtn.textContent = '📋';
+  copyBtn.onclick = () => { navigator.clipboard.writeText(text).then(() => { copyBtn.textContent = '✓'; copyBtn.classList.add('copied'); setTimeout(() => { copyBtn.textContent = '📋'; copyBtn.classList.remove('copied'); }, 2000); }); };
   bubble.appendChild(copyBtn);
-
-  div.appendChild(label);div.appendChild(bubble);container.appendChild(div);
-  container.scrollTop=container.scrollHeight;
+  div.appendChild(label); div.appendChild(bubble); container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
   return div;
 }
-
-function addTyping(){
-  const container=document.getElementById('messages');
-  const div=document.createElement('div');div.className='msg ai typing';div.id='typing';
-  div.innerHTML='<div class="msg-label">Nexus</div><div class="bubble"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>';
-  container.appendChild(div);container.scrollTop=container.scrollHeight;
+ 
+function addTyping() {
+  const container = document.getElementById('messages');
+  const div = document.createElement('div'); div.className = 'msg ai typing'; div.id = 'typing';
+  div.innerHTML = '<div class="msg-label">Nexus</div><div class="bubble"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>';
+  container.appendChild(div); container.scrollTop = container.scrollHeight;
 }
-function removeTyping(){const t=document.getElementById('typing');if(t)t.remove();}
-
-async function sendMessage(){
-  const input=document.getElementById('input');
-  const text=input.value.trim();
-  if(!text&&!currentImage)return;
-  const img=currentImage;
-  input.value='';input.style.height='auto';
-  document.getElementById('btn-send').disabled=true;
+function removeTyping() { const t = document.getElementById('typing'); if (t) t.remove(); }
+ 
+// -- SEND MESSAGE --
+async function sendMessage() {
+  const input = document.getElementById('input');
+  const text  = input.value.trim();
+  if (!text && !currentImage) return;
+ 
+  const img = currentImage;
+  input.value = ''; input.style.height = 'auto';
+  document.getElementById('btn-send').disabled = true;
   removeImage();
-  addMessage('user',text||'Image envoyee',img);
-
+  addMessage('user', text || 'Image envoyee', img);
+ 
   let userContent;
-  if(img){
-    const base64=img.split(',')[1];
-    const mime=img.split(';')[0].split(':')[1];
-    userContent=[{type:'image_url',image_url:{url:`data:${mime};base64,${base64}`}},{type:'text',text:text||'Decris et analyse cette image.'}];
-  }else{userContent=text;}
-
-  messages.push({role:'user',content:userContent});
+  if (img) {
+    const base64 = img.split(',')[1];
+    const mime   = img.split(';')[0].split(':')[1];
+    userContent  = [{ type: 'image_url', image_url: { url: `data:${mime};base64,${base64}` } }, { type: 'text', text: text || 'Decris et analyse cette image.' }];
+  } else {
+    userContent = text;
+  }
+  messages.push({ role: 'user', content: userContent });
   addTyping();
-
-  try{
-    const body = { messages };
-if (hasGoogle && accessToken) body.accessToken = accessToken;
-if (userId) body.userId = userId;
-    const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    const data=await res.json();
+ 
+  try {
+    // Toujours relire depuis localStorage à chaque envoi (fix iOS PWA)
+    const token = getToken();
+    const uid   = getUserId();
+    const body  = { messages };
+    if (token && uid) { body.accessToken = token; body.userId = uid; }
+ 
+    const res  = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const data = await res.json();
     removeTyping();
-    const reply=data.content?.[0]?.text||"Je n'ai pas pu traiter ta demande.";
-    messages.push({role:'assistant',content:reply});
-
-    const deleteMatch=reply.match(/DELETE_EVENT\[eventId:(.*?)\|summary:(.*?)\]/s);
-    const eventMatch=reply.match(/CREATE_EVENT\[summary:(.*?)\|start:(.*?)\|end:(.*?)(?:\|location:(.*?))?(?:\|description:(.*?))?\]/s);
-    const emailMatch=reply.match(/SEND_EMAIL\[to:(.*?)\|subject:(.*?)\|body:(.*?)\]/s);
-    const replyMatch=reply.match(/REPLY_EMAIL\[to:(.*?)\|subject:(.*?)\|body:(.*?)\|threadId:(.*?)\]/s);
-    const memoryMatch=reply.match(/SAVE_MEMORY\[(.*?)\]/s);
-
-    if(memoryMatch){
-      const pairs=memoryMatch[1].split('|');const md={};
-      pairs.forEach(p=>{const[k,...v]=p.split(':');if(k&&v.length)md[k.trim()]=v.join(':').trim();});
-      fetch('/api/memory',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(md)});
+ 
+    const reply = data.content?.[0]?.text || "Je n'ai pas pu traiter ta demande.";
+    messages.push({ role: 'assistant', content: reply });
+ 
+    const deleteMatch = reply.match(/DELETE_EVENT\[eventId:(.*?)\|summary:(.*?)\]/s);
+    const eventMatch  = reply.match(/CREATE_EVENT\[summary:(.*?)\|start:(.*?)\|end:(.*?)(?:\|location:(.*?))?(?:\|description:(.*?))?\]/s);
+    const emailMatch  = reply.match(/SEND_EMAIL\[to:(.*?)\|subject:(.*?)\|body:(.*?)\]/s);
+    const replyMatch  = reply.match(/REPLY_EMAIL\[to:(.*?)\|subject:(.*?)\|body:(.*?)\|threadId:(.*?)\]/s);
+    const memoryMatch = reply.match(/SAVE_MEMORY\[(.*?)\]/s);
+ 
+    if (memoryMatch) {
+      const pairs = memoryMatch[1].split('|'); const md = {};
+      pairs.forEach(p => { const idx = p.indexOf(':'); if (idx > -1) md[p.slice(0,idx).trim()] = p.slice(idx+1).trim(); });
+      if (uid) md.userId = uid;
+      fetch('/api/memory', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(md) });
     }
-
-    const clean=reply.replace(/DELETE_EVENT\[.*?\]/s,'').replace(/CREATE_EVENT\[.*?\]/s,'').replace(/SEND_EMAIL\[.*?\]/s,'').replace(/REPLY_EMAIL\[.*?\]/s,'').replace(/SAVE_MEMORY\[.*?\]/s,'').trim();
-
-    if(deleteMatch&&hasGoogle){showActionCard('delete',{eventId:deleteMatch[1].trim(),summary:deleteMatch[2].trim()});addMessage('ai',clean||'Je vais supprimer cet evenement. Confirme ci-dessous.');}
-    else if(eventMatch&&hasGoogle){showActionCard('event',{summary:eventMatch[1].trim(),start:eventMatch[2].trim(),end:eventMatch[3].trim(),location:eventMatch[4]?.trim()||''});addMessage('ai',clean||'Je vais creer cet evenement. Confirme ci-dessous.');}
-    else if(emailMatch&&hasGoogle){showActionCard('email',{to:emailMatch[1].trim(),subject:emailMatch[2].trim(),body:emailMatch[3].trim()});addMessage('ai',clean||'Je vais envoyer cet email. Confirme ci-dessous.');}
-    else if(replyMatch&&hasGoogle){showActionCard('reply',{to:replyMatch[1].trim(),subject:replyMatch[2].trim(),body:replyMatch[3].trim(),threadId:replyMatch[4].trim()});addMessage('ai',clean||'Je vais repondre a cet email. Confirme ci-dessous.');}
-    else{addMessage('ai',clean||reply);}
-
-    if(voiceEnabled)speak(clean||reply);
-  }catch(e){removeTyping();addMessage('ai','Erreur de connexion.');}
-
-  document.getElementById('btn-send').disabled=false;
+ 
+    const clean = reply
+      .replace(/DELETE_EVENT\[.*?\]/s,'')
+      .replace(/CREATE_EVENT\[.*?\]/s,'')
+      .replace(/SEND_EMAIL\[.*?\]/s,'')
+      .replace(/REPLY_EMAIL\[.*?\]/s,'')
+      .replace(/SAVE_MEMORY\[.*?\]/s,'')
+      .trim();
+ 
+    if      (deleteMatch && token) { showActionCard('delete', { eventId: deleteMatch[1].trim(), summary: deleteMatch[2].trim() }); addMessage('ai', clean || 'Je vais supprimer cet evenement. Confirme ci-dessous.'); }
+    else if (eventMatch  && token) { showActionCard('event',  { summary: eventMatch[1].trim(), start: eventMatch[2].trim(), end: eventMatch[3].trim(), location: eventMatch[4]?.trim() || '' }); addMessage('ai', clean || 'Je vais creer cet evenement. Confirme ci-dessous.'); }
+    else if (emailMatch  && token) { showActionCard('email',  { to: emailMatch[1].trim(), subject: emailMatch[2].trim(), body: emailMatch[3].trim() }); addMessage('ai', clean || 'Je vais envoyer cet email. Confirme ci-dessous.'); }
+    else if (replyMatch  && token) { showActionCard('reply',  { to: replyMatch[1].trim(), subject: replyMatch[2].trim(), body: replyMatch[3].trim(), threadId: replyMatch[4].trim() }); addMessage('ai', clean || 'Je vais repondre a cet email. Confirme ci-dessous.'); }
+    else { addMessage('ai', clean || reply); }
+ 
+    if (voiceEnabled) speak(clean || reply);
+  } catch(e) {
+    removeTyping();
+    addMessage('ai', 'Erreur de connexion. Verifie ta connexion internet.');
+  }
+ 
+  document.getElementById('btn-send').disabled = false;
   document.getElementById('input').focus();
 }
-
-// ACTION CARDS
-function showActionCard(type,data){
-  const ex=document.getElementById('action-card');if(ex)ex.remove();
-  const div=document.createElement('div');div.id='action-card';div.className='action-card '+type+'-t';
-  const label=document.createElement('div');label.className='action-label';
-  const labels={email:'email a envoyer',reply:'reponse a envoyer',event:'evenement a creer',delete:'evenement a supprimer'};
-  label.textContent=labels[type];div.appendChild(label);
-
-  function af(l,v){const d=document.createElement('div');d.className='action-field';d.innerHTML='<strong>'+l+' :</strong> '+v;div.appendChild(d);}
-
-  if(type==='email'||type==='reply'){
-    af('A',data.to);af('Objet',type==='reply'?'Re: '+data.subject:data.subject);
-    const bd=document.createElement('div');bd.className='action-body';bd.textContent=data.body;div.appendChild(bd);
-  }else if(type==='event'){
-    af('Titre',data.summary);
-    const s=new Date(data.start).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit',timeZone:'Europe/Brussels'});
-    const e=new Date(data.end).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Brussels'});
-    af('Quand',s+' -> '+e);if(data.location)af('Lieu',data.location);
-  }else if(type==='delete'){af('Titre',data.summary);}
-
-  const btns=document.createElement('div');btns.className='action-btns';
-  const bc=document.createElement('button');bc.className='btn-confirm '+(type==='delete'?'red':type==='event'?'blue':'green');
-  const bl={email:'Envoyer',reply:'Repondre',event:'Creer',delete:'Supprimer'};
-  bc.textContent=bl[type];bc.addEventListener('click',()=>executeAction(type,data));
-  const bx=document.createElement('button');bx.className='btn-cancel-action';bx.textContent='Annuler';bx.addEventListener('click',()=>div.remove());
-  btns.appendChild(bc);btns.appendChild(bx);div.appendChild(btns);
+ 
+// -- ACTION CARDS --
+function showActionCard(type, data) {
+  const ex = document.getElementById('action-card'); if (ex) ex.remove();
+  const div = document.createElement('div'); div.id = 'action-card'; div.className = 'action-card ' + type + '-t';
+  const label = document.createElement('div'); label.className = 'action-label';
+  label.textContent = { email: 'email a envoyer', reply: 'reponse a envoyer', event: 'evenement a creer', delete: 'evenement a supprimer' }[type];
+  div.appendChild(label);
+  function af(l, v) { const d = document.createElement('div'); d.className = 'action-field'; d.innerHTML = '<strong>' + l + ' :</strong> ' + v; div.appendChild(d); }
+  if (type === 'email' || type === 'reply') {
+    af('A', data.to); af('Objet', type === 'reply' ? 'Re: ' + data.subject : data.subject);
+    const bd = document.createElement('div'); bd.className = 'action-body'; bd.textContent = data.body; div.appendChild(bd);
+  } else if (type === 'event') {
+    af('Titre', data.summary);
+    const s = new Date(data.start).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Brussels' });
+    const e = new Date(data.end).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Brussels' });
+    af('Quand', s + ' → ' + e); if (data.location) af('Lieu', data.location);
+  } else if (type === 'delete') {
+    af('Titre', data.summary);
+  }
+  const btns = document.createElement('div'); btns.className = 'action-btns';
+  const bc = document.createElement('button'); bc.className = 'btn-confirm ' + (type === 'delete' ? 'red' : type === 'event' ? 'blue' : 'green');
+  bc.textContent = { email: 'Envoyer', reply: 'Repondre', event: 'Creer', delete: 'Supprimer' }[type];
+  bc.addEventListener('click', () => executeAction(type, data));
+  const bx = document.createElement('button'); bx.className = 'btn-cancel-action'; bx.textContent = 'Annuler'; bx.addEventListener('click', () => div.remove());
+  btns.appendChild(bc); btns.appendChild(bx); div.appendChild(btns);
   document.getElementById('messages').appendChild(div);
-  document.getElementById('messages').scrollTop=document.getElementById('messages').scrollHeight;
+  document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
 }
-
-async function executeAction(type,data){
-  const card=document.getElementById('action-card');if(card)card.remove();
+ 
+async function executeAction(type, data) {
+  const card = document.getElementById('action-card'); if (card) card.remove();
   addTyping();
-  try{
-    const eps={email:'/api/send-email',reply:'/api/reply-email',event:'/api/create-event',delete:'/api/delete-event'};
-    const body=type==='delete'?{accessToken,eventId:data.eventId}:{accessToken,...data};
-    const res=await fetch(eps[type],{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    const result=await res.json();removeTyping();
-    const msgs={email:'Email envoye a '+data.to,reply:'Reponse envoyee a '+data.to,event:'Evenement cree : '+data.summary,delete:'Evenement supprime : '+data.summary};
-    addMessage('ai',result.success?'✅ **'+msgs[type]+'** !':'❌ Erreur : '+result.error);
-  }catch(e){removeTyping();addMessage('ai','Erreur de connexion.');}
+  try {
+    const token = getToken();
+    const eps   = { email: '/api/send-email', reply: '/api/reply-email', event: '/api/create-event', delete: '/api/delete-event' };
+    const body  = type === 'delete' ? { accessToken: token, eventId: data.eventId } : { accessToken: token, ...data };
+    const res   = await fetch(eps[type], { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const result = await res.json(); removeTyping();
+    const msgs = { email: 'Email envoye a ' + data.to, reply: 'Reponse envoyee a ' + data.to, event: 'Evenement cree : ' + data.summary, delete: 'Evenement supprime : ' + data.summary };
+    addMessage('ai', result.success ? '✅ **' + msgs[type] + '** !' : '❌ Erreur : ' + result.error);
+  } catch(e) { removeTyping(); addMessage('ai', 'Erreur de connexion.'); }
 }
-
-// NOTIFICATIONS
-async function requestNotificationPermission(){if('Notification'in window&&Notification.permission==='default')await Notification.requestPermission();}
-function sendNotification(title,body){if(Notification.permission!=='granted')return;const n=new Notification(title,{body});n.onclick=()=>window.focus();}
-
-let lastEmailCount=0;
-async function checkNewEmails(){
-  if(!hasGoogle||!accessToken)return;
-  try{
-    const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({accessToken,messages:[{role:'user',content:'Combien ai-je d emails non lus ? Reponds uniquement avec un nombre entier.'}]})});
-    const data=await res.json();
-    const count=parseInt(data.content?.[0]?.text?.match(/\d+/)?.[0]||'0');
-    if(count>lastEmailCount&&lastEmailCount!==0)sendNotification('📧 Nouveau message','Tu as '+count+' emails non lus');
-    lastEmailCount=count;
-  }catch(e){}
+ 
+// -- NOTIFICATIONS --
+async function requestNotificationPermission() {
+  if ('Notification' in window && Notification.permission === 'default') await Notification.requestPermission();
 }
-
-function checkMorningBriefing(){
-  const now=new Date();const h=now.getHours();
-  const last=localStorage.getItem('nexus_last_briefing');const today=now.toDateString();
-  if(h>=7&&h<10&&last!==today&&hasGoogle){
-    localStorage.setItem('nexus_last_briefing',today);
-    setTimeout(()=>{sendNotification('☀️ Bonjour !','Ton briefing Nexus est pret.');setTimeout(()=>quickAsk('Donne-moi mon briefing du matin : agenda du jour et emails importants'),2000);},3000);
+function sendNotification(title, body) {
+  if (Notification.permission !== 'granted') return;
+  const n = new Notification(title, { body }); n.onclick = () => window.focus();
+}
+function checkMorningBriefing() {
+  const now = new Date(); const h = now.getHours();
+  const last = localStorage.getItem('nexus_last_briefing'); const today = now.toDateString();
+  if (h >= 7 && h < 10 && last !== today && isGoogle()) {
+    localStorage.setItem('nexus_last_briefing', today);
+    setTimeout(() => {
+      sendNotification('☀️ Bonjour !', 'Ton briefing Nexus est pret.');
+      setTimeout(() => quickAsk('Donne-moi mon briefing du matin : agenda du jour et emails importants'), 2000);
+    }, 3000);
   }
 }
-
-function startChecks(){requestNotificationPermission();checkMorningBriefing();setInterval(checkNewEmails,5*60*1000);setInterval(checkMorningBriefing,60*1000);}
-
+function startChecks() {
+  requestNotificationPermission();
+  checkMorningBriefing();
+  setInterval(checkMorningBriefing, 60 * 1000);
+}
+ 
 init();
 </script>
 </body>
 </html>
+ 
