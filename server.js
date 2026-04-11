@@ -174,25 +174,17 @@ app.post('/api/chat', async (req, res) => {
       return m;
     });
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 1024,
-        system: system,
-        messages: claudeMessages
-      })
-    });
-
-    const data = await response.json();
-    console.log('Claude response:', JSON.stringify(data).slice(0, 200));
-    const reply = (data.content && data.content[0] && data.content[0].text) || "Je n'ai pas pu traiter ta demande.";
-
+  const response = await fetch('http://localhost:11434/api/chat', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    model: 'llama3.3',
+    messages: [{ role: 'system', content: system }, ...claudeMessages],
+    stream: false
+  })
+});
+const data = await response.json();
+const reply = data.message?.content || "Erreur";
     // Save memory if needed
     const memoryMatch = reply.match(/SAVE_MEMORY\[(.*?)\]/s);
     if (memoryMatch && userId) {
