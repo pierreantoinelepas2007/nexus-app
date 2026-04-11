@@ -54,7 +54,7 @@ async function saveUserMemory(userId, data) {
 async function callAI(system, messages) {
   // Ollama local (si OLLAMA_URL défini ou en local)
   const ollamaUrl = process.env.OLLAMA_URL || 'http://localhost:11434';
-  const model = process.env.OLLAMA_MODEL || 'llama3.2';
+  const model = process.env.OLLAMA_MODEL || 'llama3.2:1b';
 
   try {
     const response = await fetch(`${ollamaUrl}/api/chat`, {
